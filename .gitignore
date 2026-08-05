@@ -1,0 +1,16 @@
+# Vagrant state — contains the per-machine SSH PRIVATE KEYS and stale VM UUIDs.
+# Committing this leaks a key and breaks `vagrant up` on a fresh clone.
+.vagrant/
+*.box
+
+# Kubernetes credentials — never commit a kubeconfig or a cluster token.
+kubeconfig
+*.kubeconfig
+k3s.yaml
+token
+node-token
+
+# Local noise
+*.log
+*.swp
+.DS_Store
