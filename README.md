@@ -9,6 +9,8 @@
 | `p3/` | K3d + Argo CD GitOps, no Vagrant | `bash p3/scripts/install.sh && bash p3/scripts/create_cluster.sh` |
 | `bonus/` | Self-hosted GitLab wired into the p3 cluster | `bash bonus/scripts/install.sh` |
 
+- **[docs/](docs/)** — step one explained from zero: VMs, Vagrant, boxes, SSH, and p1 slice 1.1.
+  Open **`docs/index.html`** in a browser for the readable version, or **[docs/EXPLANATION.md](docs/EXPLANATION.md)** for plain Markdown.
 - **[PLAN.md](PLAN.md)** — the build plan: work split, per-part method, every decision and its justification from the subject.
 - **[CLAUDE.md](CLAUDE.md)** — working rules, graded literals, commands, and the traps.
 - `en.subject.pdf` — the subject. It is the source of truth for grading.

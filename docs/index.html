@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step One, explained from zero — Inception-of-Things</title>
+<style>
+:root{
+  --bg:#fbfbfd; --panel:#ffffff; --ink:#1a1d23; --ink-soft:#5b6270; --ink-faint:#8b93a1;
+  --line:#e5e7ec; --line-soft:#eef0f4;
+  --accent:#4f46e5; --accent-soft:#eef0ff; --accent-ink:#3730a3;
+  --ok:#0f8a5f; --ok-soft:#e7f6ef;
+  --warn:#b45309; --warn-soft:#fdf3e3;
+  --danger:#c0392f; --danger-soft:#fdeeec;
+  --code-bg:#f4f5f8; --code-ink:#1f2430;
+  --shadow:0 1px 2px rgba(16,20,30,.04), 0 8px 24px rgba(16,20,30,.06);
+  --radius:12px;
+  --sidebar:280px;
+}
+html[data-theme="dark"]{
+  --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+  --line:#252932; --line-soft:#1d212a;
+  --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+  --ok:#4ade9c; --ok-soft:#12251d;
+  --warn:#e0a33c; --warn-soft:#2a2113;
+  --danger:#f0796c; --danger-soft:#2b1614;
+  --code-bg:#1a1e26; --code-ink:#dfe3ea;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+@media (prefers-color-scheme: dark){
+  html:not([data-theme="light"]){
+    --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+    --line:#252932; --line-soft:#1d212a;
+    --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+    --ok:#4ade9c; --ok-soft:#12251d;
+    --warn:#e0a33c; --warn-soft:#2a2113;
+    --danger:#f0796c; --danger-soft:#2b1614;
+    --code-bg:#1a1e26; --code-ink:#dfe3ea;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:24px}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+code,kbd,pre{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+/* ---------- progress ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:100;transition:width .1s linear}
+
+/* ---------- layout ---------- */
+.wrap{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;max-width:1320px;margin:0 auto}
+
+/* ---------- sidebar ---------- */
+aside{
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 20px 40px;
+  border-right:1px solid var(--line);background:var(--bg);
+}
+aside .brand{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;margin-bottom:4px}
+aside .brand-sub{font-size:15px;font-weight:650;line-height:1.35;margin-bottom:20px}
+nav a{
+  display:flex;gap:10px;align-items:baseline;padding:7px 10px;margin:1px 0;border-radius:8px;
+  color:var(--ink-soft);text-decoration:none;font-size:14px;line-height:1.4;
+  border-left:2px solid transparent;
+}
+nav a .n{color:var(--ink-faint);font-size:12px;font-variant-numeric:tabular-nums;min-width:14px}
+nav a:hover{background:var(--line-soft);color:var(--ink)}
+nav a.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;border-left-color:var(--accent)}
+nav a.active .n{color:var(--accent-ink)}
+.sidebar-foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-faint)}
+.sidebar-foot a{color:var(--ink-soft)}
+
+/* ---------- main ---------- */
+main{padding:56px 56px 120px;min-width:0;max-width:880px}
+.eyebrow{display:inline-block;font-size:12px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent-ink);background:var(--accent-soft);padding:5px 11px;border-radius:99px;margin-bottom:18px}
+h1{font-size:clamp(30px,4.4vw,42px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em;font-weight:720}
+.lede{font-size:18px;line-height:1.65;color:var(--ink-soft);margin:0 0 10px}
+.meta{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-faint);margin-top:22px;
+  padding-top:18px;border-top:1px solid var(--line)}
+
+section{padding-top:52px;scroll-margin-top:20px}
+h2{font-size:25px;line-height:1.25;margin:0 0 6px;letter-spacing:-.015em;font-weight:680;display:flex;gap:12px;align-items:baseline}
+h2 .num{font-size:14px;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;
+  background:var(--accent-soft);padding:3px 9px;border-radius:7px;line-height:1.4}
+h3{font-size:17px;margin:30px 0 8px;font-weight:660;letter-spacing:-.005em}
+h4{font-size:15px;margin:22px 0 6px;font-weight:650;color:var(--ink-soft)}
+p{margin:12px 0}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+strong{font-weight:660}
+a{color:var(--accent-ink)}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+
+p code, li code, td code, th code, h3 code, h4 code, dd code{
+  background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:5px;font-size:.875em;
+  border:1px solid var(--line-soft);
+}
+pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:var(--radius);
+  overflow-x:auto;font-size:13.5px;line-height:1.65;border:1px solid var(--line);margin:16px 0}
+pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
+.pre-wrap{position:relative}
+.copy{position:absolute;top:9px;right:9px;font:inherit;font-size:11.5px;font-weight:600;
+  padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);
+  cursor:pointer;opacity:0;transition:opacity .12s}
+.pre-wrap:hover .copy{opacity:1}
+.copy:hover{color:var(--ink);border-color:var(--ink-faint)}
+.copy.done{color:var(--ok);border-color:var(--ok)}
+
+/* ---------- tables ---------- */
+.tbl{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{text-align:left;font-weight:650;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-faint);padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+td{padding:12px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--line-soft)}
+
+/* ---------- callouts ---------- */
+.call{display:grid;grid-template-columns:auto 1fr;gap:12px;margin:20px 0;padding:14px 16px;
+  border-radius:var(--radius);border:1px solid var(--line);background:var(--panel)}
+.call .ic{font-size:16px;line-height:1.5}
+.call .bd{min-width:0}
+.call .bd > :first-child{margin-top:0}
+.call .bd > :last-child{margin-bottom:0}
+.call .t{font-weight:660;font-size:14px;margin-bottom:2px}
+.call.info{background:var(--accent-soft);border-color:transparent}
+.call.info .t{color:var(--accent-ink)}
+.call.warn{background:var(--warn-soft);border-color:transparent}
+.call.warn .t{color:var(--warn)}
+.call.danger{background:var(--danger-soft);border-color:transparent}
+.call.danger .t{color:var(--danger)}
+.call.ok{background:var(--ok-soft);border-color:transparent}
+.call.ok .t{color:var(--ok)}
+.call.quote{background:var(--panel);border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0}
+.call.quote .t{color:var(--accent-ink)}
+.call.quote em{color:var(--ink)}
+
+/* ---------- diagram ---------- */
+.diagram{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;margin:20px 0;box-shadow:var(--shadow)}
+.layer{border:1px solid var(--line);border-radius:10px;padding:13px 16px;margin:0}
+.layer + .layer{margin-top:0}
+.layer .lname{font-weight:650;font-size:14.5px}
+.layer .lnote{font-size:12.5px;color:var(--ink-faint);margin-top:2px}
+.l0{background:var(--line-soft)}
+.l1{background:var(--accent-soft);border-color:transparent;margin-top:12px}
+.l2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.l2 > div{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 14px}
+.tagline{display:inline-block;font-size:11px;font-weight:650;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-faint);border:1px solid var(--line);border-radius:99px;padding:2px 8px;margin-left:8px;vertical-align:middle}
+
+/* ---------- checklist ---------- */
+.check{list-style:none;padding:0;margin:16px 0;counter-reset:c}
+.check li{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;
+  padding:12px 14px;border:1px solid var(--line);border-radius:10px;margin:8px 0;background:var(--panel)}
+.check li::before{counter-increment:c;content:counter(c);
+  width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);
+  font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:2px}
+.check li > div > :first-child{margin-top:0}
+.check li > div > :last-child{margin-bottom:0}
+.nots{list-style:none;padding:0;margin:16px 0}
+.nots li{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:8px 12px;margin:5px 0;
+  border-radius:9px;background:var(--danger-soft);font-size:14.5px}
+.nots li .x{color:var(--danger);font-weight:700}
+
+/* ---------- glossary ---------- */
+.gloss{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+  background:var(--panel);margin:18px 0;box-shadow:var(--shadow)}
+.gloss > div{display:grid;grid-template-columns:210px 1fr;gap:16px;padding:11px 16px;border-bottom:1px solid var(--line-soft);font-size:14.5px}
+.gloss > div:last-child{border-bottom:0}
+.gloss dt{font-weight:650;margin:0}
+.gloss dd{margin:0;color:var(--ink-soft)}
+
+/* ---------- quiz ---------- */
+details.q{border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel);overflow:hidden}
+details.q summary{cursor:pointer;padding:13px 16px;font-weight:600;font-size:15px;list-style:none;
+  display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);
+  font-size:12px;font-weight:700;display:grid;place-items:center}
+details.q summary .chev{color:var(--ink-faint);font-size:12px;transition:transform .15s}
+details.q[open] summary .chev{transform:rotate(90deg)}
+details.q .ans{padding:0 16px 15px 50px;color:var(--ink-soft);font-size:14.5px}
+details.q .ans > :first-child{margin-top:0}
+
+/* ---------- steps / order ---------- */
+.phases{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+.phase{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:18px;box-shadow:var(--shadow)}
+.phase h4{margin:0 0 10px;color:var(--ink);font-size:14px;letter-spacing:.05em;text-transform:uppercase;font-weight:680}
+.phase ol{margin:0;padding-left:20px;font-size:14.5px}
+.phase li{margin:7px 0}
+.gate{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;background:var(--warn-soft);
+  color:var(--warn);padding:2px 7px;border-radius:5px;margin-left:6px;vertical-align:middle}
+
+/* ---------- theme toggle ---------- */
+.toggle{position:fixed;top:18px;right:20px;z-index:90;display:flex;gap:6px;
+  background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:4px;box-shadow:var(--shadow)}
+.toggle button{border:0;background:none;cursor:pointer;font:inherit;font-size:14px;line-height:1;
+  padding:7px 10px;border-radius:99px;color:var(--ink-faint)}
+.toggle button.on{background:var(--accent-soft);color:var(--accent-ink)}
+
+/* ---------- mobile ---------- */
+.menu-btn{display:none}
+@media (max-width:1000px){
+  .wrap{grid-template-columns:1fr}
+  aside{position:fixed;inset:0 auto 0 0;width:290px;z-index:80;transform:translateX(-100%);
+    transition:transform .2s ease;box-shadow:var(--shadow);background:var(--panel)}
+  aside.open{transform:none}
+  main{padding:76px 22px 100px}
+  .menu-btn{display:grid;place-items:center;position:fixed;top:18px;left:18px;z-index:90;
+    width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);cursor:pointer;font-size:17px;box-shadow:var(--shadow)}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:79;display:none}
+  .scrim.open{display:block}
+  .phases{grid-template-columns:1fr}
+  .l2{grid-template-columns:1fr}
+  .gloss > div{grid-template-columns:1fr;gap:2px}
+}
+@media print{
+  aside,.toggle,.menu-btn,#progress,.copy{display:none}
+  .wrap{grid-template-columns:1fr}
+  main{padding:0;max-width:100%}
+  details.q{break-inside:avoid} details.q[open]{}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
+<div class="scrim" id="scrim"></div>
+
+<div class="toggle" role="group" aria-label="Colour theme">
+  <button id="tLight" title="Light">☀</button>
+  <button id="tDark" title="Dark">☾</button>
+</div>
+
+<div class="wrap">
+
+<aside id="sidebar">
+  <div class="brand">Inception-of-Things</div>
+  <div class="brand-sub">Step One,<br>explained from zero</div>
+  <nav id="nav">
+    <a href="#s0"><span class="n">0</span><span>The 10-second map</span></a>
+    <a href="#s1"><span class="n">1</span><span>What is a virtual machine?</span></a>
+    <a href="#s2"><span class="n">2</span><span>Why an <em>outer</em> VM?</span></a>
+    <a href="#s3"><span class="n">3</span><span>What is Vagrant?</span></a>
+    <a href="#s4"><span class="n">4</span><span>Name vs hostname</span></a>
+    <a href="#s5"><span class="n">5</span><span>Passwordless SSH</span></a>
+    <a href="#s6"><span class="n">6</span><span>The networking, previewed</span></a>
+    <a href="#s7"><span class="n">7</span><span>The first slice — 1.1</span></a>
+    <a href="#s8"><span class="n">8</span><span>What we are NOT doing</span></a>
+    <a href="#s9"><span class="n">9</span><span>Order of operations</span></a>
+    <a href="#s10"><span class="n">10</span><span>Glossary</span></a>
+    <a href="#s11"><span class="n">11</span><span>Test yourself</span></a>
+  </nav>
+  <div class="sidebar-foot">
+    Source: <a href="EXPLANATION.md">EXPLANATION.md</a><br>
+    Plan: <a href="../PLAN.md">PLAN.md</a> · Rules: <a href="../CLAUDE.md">CLAUDE.md</a>
+  </div>
+</aside>
+
+<main>
+
+<span class="eyebrow">Before we build anything</span>
+<h1>Step One, explained from zero</h1>
+<p class="lede">
+  This page explains <strong>only the first step</strong>: building the outer VM (Phase&nbsp;0),
+  then <strong>p1 slice&nbsp;1.1 — one virtual machine, with the right box and the right hostname.</strong>
+</p>
+<p class="lede">
+  Nothing else. Not K3s yet. Not the second machine yet. Not the network yet.
+  It assumes you know nothing about virtualisation, Vagrant or Kubernetes — every concept
+  is introduced before it is used.
+</p>
+<div class="meta">
+  <span>~15 min read</span><span>·</span>
+  <span>Subject v4.0</span><span>·</span>
+  <span>Read top to bottom once, then we build</span>
+</div>
+
+<!-- ============ 0 ============ -->
+<section id="s0">
+  <h2><span class="num">0</span> The 10-second map — what are we even building?</h2>
+  <p>The subject asks for three labs that get progressively bigger:</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Part</th><th>One sentence</th></tr></thead>
+    <tbody>
+      <tr><td><strong>p1</strong></td><td>Two computers-that-aren't-real, running a tiny Kubernetes, talking to each other.</td></tr>
+      <tr><td><strong>p2</strong></td><td>One such computer, running three websites, with a traffic cop that picks which website answers.</td></tr>
+      <tr><td><strong>p3</strong></td><td>No fake computers at all — Kubernetes inside Docker, and a robot that deploys your code when you push to GitHub.</td></tr>
+      <tr><td><strong>bonus</strong></td><td>Your own private GitHub, running inside that same Kubernetes.</td></tr>
+    </tbody>
+  </table></div>
+  <p>
+    We own <strong>p1 and p2</strong>. We start at p1. And p1 starts with
+    <strong>one virtual machine that boots and has the right name.</strong>
+    That is genuinely the whole first slice.
+  </p>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">It sounds trivial. It is not.</div>
+    <p>About a third of the ways this project fails happen right here — before Kubernetes is even installed.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <h2><span class="num">1</span> Concept: what is a virtual machine?</h2>
+  <p>Your laptop has one CPU, some RAM, and a disk. Normally one operating system (your Ubuntu) owns all of it.</p>
+  <p>
+    A <strong>virtual machine (VM)</strong> is a <em>pretend computer</em> built out of your real computer's resources.
+    A program called a <strong>hypervisor</strong> carves off, say, 1 CPU core and 512&nbsp;MB of RAM, invents a fake hard
+    disk (which is really just a big file), invents a fake network card, and then boots a <em>completely separate</em>
+    operating system inside that fake hardware.
+  </p>
+  <p>The OS inside doesn't know it's fake. It thinks it has its own machine.</p>
+  <p>Two words we will use constantly:</p>
+  <ul>
+    <li><strong>Host</strong> — the real machine. Your Ubuntu desktop.</li>
+    <li><strong>Guest</strong> — the pretend machine running inside it. Our Debian VMs.</li>
+  </ul>
+  <p>
+    <strong>Why do we want this?</strong> Because we're going to install Kubernetes, mess with the network, and then
+    <em>delete the whole thing and do it again</em> — ten times. You cannot do that to your real laptop.
+    A VM is disposable. <code>vagrant destroy</code> and it's gone without a trace.
+  </p>
+  <div class="call info"><div class="ic">💡</div><div class="bd">
+    <div class="t">Analogy</div>
+    <p>A VM is a sealed aquarium on your desk. You can pour anything into it, boil it, or empty it into the sink. Your room stays dry.</p>
+  </div></div>
+
+  <h3>1.1 The two hypervisors we care about</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Name</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td><strong>KVM</strong><br><span style="color:var(--ink-faint);font-size:13px">+ libvirt + QEMU</span></td>
+          <td>Virtualisation built <em>into the Linux kernel</em>. Fast, native, already on your machine.
+              <code>libvirt</code> is the management layer, <code>virsh</code> is its command-line tool.</td></tr>
+      <tr><td><strong>VirtualBox</strong></td>
+          <td>Oracle's cross-platform hypervisor. Runs on Windows/Mac/Linux. Installs as an add-on kernel module.</td></tr>
+    </tbody>
+  </table></div>
+  <p>We are using <strong>KVM/libvirt</strong>, and this is a deliberate choice with two reasons:</p>
+  <ol>
+    <li>Your kernel is <code>7.0.0-28-generic</code>. Ubuntu's packaged VirtualBox (7.0.16)
+        <strong>cannot compile its kernel modules against a 7.0 kernel</strong> — it would simply refuse to install.</li>
+    <li>We are going to run VMs <em>inside another VM</em> (see §2). KVM-inside-KVM (“nested virtualisation”)
+        is reliable and supported. VirtualBox-inside-KVM is famously not.</li>
+  </ol>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Is that allowed? Yes — subject p4, blue box</div>
+    <p><em>“You can use any tools you want to set up your host virtual machine as well as the provider used in Vagrant.”</em></p>
+    <p style="font-size:13.5px;color:var(--ink-faint);margin-bottom:0">We will quote that line if an evaluator asks.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <h2><span class="num">2</span> Concept: why an <em>outer</em> VM? (Phase 0)</h2>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p4, bullet 1, in bold</div>
+    <p><em>“The whole project has to be done in a <strong>virtual machine</strong>.”</em></p>
+  </div></div>
+  <p>
+    Your machine is bare metal — you can prove it: <code>systemd-detect-virt</code> prints <code>none</code>.
+    So to obey that line, we build <strong>one big VM first</strong>, and do everything inside it.
+  </p>
+  <p>Which means we end up with VMs inside a VM:</p>
+
+  <div class="diagram">
+    <div class="layer l0">
+      <div class="lname">Your Ubuntu laptop <span class="tagline">bare metal · host</span></div>
+      <div class="lnote">15 GB RAM total, ~6.5 GB already used by the desktop</div>
+    </div>
+    <div class="layer l1">
+      <div class="lname">Outer VM — Debian 13 <span class="tagline">the VM the subject demands</span></div>
+      <div class="lnote">8 GB RAM · 6 vCPU · 80 GB disk · Vagrant + libvirt + Docker live here</div>
+      <div class="l2">
+        <div><div class="lname">smbarkiS</div><div class="lnote">1 CPU · 1024 MB · p1 server</div></div>
+        <div><div class="lname">smbarkiSW</div><div class="lnote">1 CPU · 512 MB · p1 worker</div></div>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    That is what <strong>nested virtualisation</strong> means: the outer VM must itself be able to <em>create</em> VMs.
+    For that, the fake CPU we give it must expose the hardware virtualisation instructions. In libvirt terms that's
+    <code>cpu mode=host-passthrough</code> — “don't invent a generic CPU, hand the guest the real one's feature set.”
+  </p>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <div class="t">How we'll know it worked</div>
+    <p>Inside the outer VM, the file <code>/dev/kvm</code> exists. If it doesn't, the inner VMs can only run in slow
+       software emulation (minutes per boot instead of seconds) and we fall back to building on bare metal instead.
+       That's the <strong>Phase 0 decision gate</strong> — we check, we decide, and we write down which we chose,
+       because the evaluator may ask why.</p>
+  </div></div>
+  <p>
+    <strong>Why 8 GB for the outer VM?</strong> It has to hold Debian itself (~1 GB), plus 1024 + 512 MB for the two
+    inner VMs, plus later Docker and Kubernetes for p3. Your desktop already uses ~6.5 of 15 GB, so close Firefox and
+    friends before starting. And a rule we'll keep: <strong>never run p1/p2's VMs and p3's cluster at the same time.</strong>
+  </p>
+</section>
+
+<hr>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <h2><span class="num">3</span> Concept: what is Vagrant, and what problem does it solve?</h2>
+  <p>
+    Without Vagrant, creating a VM means: download an ISO, open a GUI, click Next eight times, pick a disk size,
+    sit through a Debian installer, invent a username and password, configure the network by hand. Twenty minutes of
+    clicking. And when you destroy it, you do all twenty minutes again. And your teammate's VM is subtly different from yours.
+  </p>
+  <p><strong>Vagrant turns all of that into a text file and one command.</strong></p>
+  <p>You write a file called <code>Vagrantfile</code> describing the machine you want. Then:</p>
+  <div class="pre-wrap"><pre><code>vagrant up</code></pre></div>
+  <p>
+    and Vagrant downloads a pre-built disk image, boots it, sets the hostname, configures the network, sets up SSH keys,
+    and runs your setup scripts. Two minutes, zero clicks, and <strong>identical on every machine</strong> — which matters
+    enormously, because the defense happens on our machine but the <em>scripts</em> must be reproducible.
+  </p>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p6</div>
+    <p><em>“you must set up two machines… using Vagrant.”</em></p>
+  </div></div>
+
+  <h3>3.1 The four Vagrant words you must know</h3>
+
+  <h4>Box</h4>
+  <p>
+    A pre-built VM disk image, ready to boot. Someone else already ran the Debian installer and saved the result.
+    <code>debian/trixie64</code> is the official Debian project's box for Debian 13. Vagrant downloads it once
+    (~500 MB) and caches it in <code>~/.vagrant.d/boxes/</code>, so the second <code>vagrant up</code> doesn't re-download.
+  </p>
+  <div class="call info"><div class="ic">💡</div><div class="bd">
+    <div class="t">Analogy</div>
+    <p>A box is a factory-sealed laptop with the OS pre-installed. You don't install Windows; you unbox it and it boots.</p>
+  </div></div>
+
+  <h4>Provider</h4>
+  <p>
+    <em>Which hypervisor</em> actually runs the VM. Same Vagrantfile, different provider
+    (<code>libvirt</code>, <code>virtualbox</code>, …). This is why a box has to publish an artifact for your provider —
+    <code>debian/trixie64</code> publishes <strong>libvirt only</strong>. Ask for it with VirtualBox and you get
+    <em>“The box you're attempting to add doesn't support the provider you requested.”</em>
+    That's a real trap; we avoid it by using libvirt.
+  </p>
+
+  <h4>Provisioner</h4>
+  <p>
+    A script Vagrant runs <em>inside</em> the guest, automatically, right after first boot. This is where K3s will
+    eventually be installed. We are <strong>not</strong> using it in slice 1.1.
+  </p>
+
+  <h4><code>vagrant ssh</code></h4>
+  <p>Logs you into the guest. No password. We'll explain why in §5.</p>
+
+  <h3>3.2 The <code>.vagrant/</code> directory — and why it must never be committed</h3>
+  <p>
+    The moment you run <code>vagrant up</code>, Vagrant creates a hidden <code>.vagrant/</code> folder next to your
+    Vagrantfile. It stores which VM belongs to this project (by UUID), and — critically —
+    <strong>the SSH private key it generated for each machine.</strong>
+  </p>
+  <div class="call danger"><div class="ic">⛔</div><div class="bd">
+    <div class="t">A private key is a secret</div>
+    <p>Committing <code>.vagrant/</code> to git publishes it. It also breaks fresh clones, because the UUIDs inside
+       point at VMs that don't exist on the new machine.</p>
+    <p style="margin-bottom:0">Already handled — <code>.gitignore</code> at the repo root contains <code>.vagrant/</code>
+       as of commit #1. <strong>Don't undo it.</strong></p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <h2><span class="num">4</span> Concept: machine <em>name</em> vs machine <em>hostname</em></h2>
+  <p style="color:var(--ink-faint);margin-top:-2px">The one people get wrong.</p>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p6</div>
+    <p><em>“The name of the machines… must be your login followed by an S for the server, and your login followed by SW
+      for the server worker.”</em></p>
+  </div></div>
+  <p>Our login is <code>smbarki</code>, so: <strong>smbarkiS</strong> and <strong>smbarkiSW</strong>.</p>
+  <p>But “name” here touches <strong>two different things</strong>, and they are set by two different lines:</p>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Set by</th><th>Who sees it</th><th>Our value</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Vagrant machine name</strong></td>
+        <td><code>config.vm.define&nbsp;"smbarkiS"</code></td>
+        <td>You. It's the label you type: <code>vagrant ssh smbarkiS</code>. Also becomes part of the hypervisor's
+            domain name (<code>virsh list</code> shows something like <code>p1_smbarkiS</code>).</td>
+        <td><code>smbarkiS</code></td>
+      </tr>
+      <tr>
+        <td><strong>Guest hostname</strong></td>
+        <td><code>config.vm.hostname&nbsp;=&nbsp;"smbarkiS"</code></td>
+        <td>The OS inside. It's what <code>hostname</code> prints and what appears in your shell prompt.</td>
+        <td><code>smbarkiS</code></td>
+      </tr>
+    </tbody>
+  </table></div>
+  <p>
+    They're independent. You could define the machine as <code>foo</code> and set its hostname to <code>bar</code> and
+    Vagrant wouldn't complain. We set <strong>both</strong> to <code>smbarkiS</code>, because the evaluator will check
+    both — they'll type <code>vagrant ssh smbarkiS</code> (needs the define) and then look at the prompt (needs the hostname).
+  </p>
+
+  <h3>4.1 A trap worth knowing <em>now</em>, before it scares you later</h3>
+  <p>
+    Much later, when K3s is running, <code>kubectl get nodes</code> will print the node's name in
+    <strong>lowercase</strong>: <code>smbarkis</code>, not <code>smbarkiS</code>.
+  </p>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">That is not a bug and you must not “fix” it</div>
+    <p>Kubernetes object names follow the RFC-1123 DNS rules, which forbid uppercase, so Kubernetes lowercases the
+       hostname when it registers the node. The VM's actual hostname is still <code>smbarkiS</code> —
+       <code>hostname</code> proves it. If you try to force it with <code>--node-name=smbarkiS</code>,
+       K3s refuses to start at all.</p>
+  </div></div>
+  <div class="call ok"><div class="ic">🎤</div><div class="bd">
+    <div class="t">Rehearse the sentence</div>
+    <p><em>“The hostname is smbarkiS as required; Kubernetes canonicalises node names to lowercase because node names
+      are DNS labels.”</em></p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <h2><span class="num">5</span> Concept: how SSH works here, and why “no password” is free</h2>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p6</div>
+    <p><em>“SSH must be functional on both machines and only be used for the initial connection…
+      A password should never be required.”</em></p>
+  </div></div>
+  <p><strong>SSH</strong> is remote login. Two ways to authenticate:</p>
+  <ul>
+    <li><strong>Password</strong> — you type a secret. Bad for automation: something must type it every time.</li>
+    <li><strong>Key pair</strong> — you hold a <em>private key</em> file; the server holds the matching <em>public key</em>.
+        The server sends a challenge, your key answers it mathematically. Nothing to type.</li>
+  </ul>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <div class="t">The good news: Vagrant already does this, with no configuration from us</div>
+    <p>On first boot it generates a fresh keypair <em>per machine</em>, injects the public half into the guest's
+       <code>~/.ssh/authorized_keys</code>, and stores the private half in <code>.vagrant/</code>.
+       So <code>vagrant ssh smbarkiS</code> just works, passwordless, out of the box.</p>
+    <p style="margin-bottom:0">The requirement is satisfied by writing <strong>zero lines</strong>.</p>
+  </div></div>
+  <div class="call danger"><div class="ic">⛔</div><div class="bd">
+    <div class="t">Do NOT add <code>config.ssh.insert_key = false</code>, and do NOT inject your own key</div>
+    <p>You'd be replacing per-machine generated keys with the well-known <em>insecure default key</em> — a security
+       <em>regression</em> that reimplements something already working. Tutorials suggest it; ignore them.</p>
+  </div></div>
+  <p>To prove it passwordlessly <em>without</em> <code>vagrant ssh</code> (an evaluator may ask), use the config Vagrant will happily print:</p>
+  <div class="pre-wrap"><pre><code>vagrant ssh-config smbarkiS      # shows Host, Port, IdentityFile
+ssh -F &lt;(vagrant ssh-config) smbarkiS hostname</code></pre></div>
+</section>
+
+<hr>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <h2><span class="num">6</span> Concept: the networking, previewed</h2>
+  <p style="color:var(--ink-faint);margin-top:-2px">We implement this in slice 1.2 — but you need the mental model now,
+     because it explains why the <em>next</em> slice exists at all.</p>
+  <p>
+    <strong>Every Vagrant VM gets a first network card that Vagrant fully controls, and it is always NAT.</strong>
+    NAT means the VM can reach the internet through the host, but nothing can reach <em>in</em>.
+    Vagrant needs this card for <code>vagrant ssh</code> (it forwards a host port to the guest's port 22).
+  </p>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">The consequence that bites everyone</div>
+    <p>Under NAT, <strong>every single VM gets the exact same IP address — <code>10.0.2.15</code></strong>.
+       Both of our machines will have it. It's not a conflict, because each lives in its own private NAT world —
+       but it means <code>10.0.2.15</code> is <em>meaningless</em> as an address for one VM to talk to another.</p>
+  </div></div>
+  <p>
+    So in slice 1.2 we add a <strong>second</strong> network card on a <strong>host-only / private network</strong>:
+    a virtual switch that connects the host and the VMs to each other, and nothing else. On that card we assign the
+    fixed addresses the subject demands.
+  </p>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p6, and p7/p8</div>
+    <p><em>“a dedicated IP address”</em> — and the screenshots show <strong>192.168.56.110</strong> (server) and
+       <strong>192.168.56.111</strong> (worker).</p>
+  </div></div>
+  <p>
+    Why <code>192.168.56.x</code> specifically? It's the classic host-only range, and more importantly it's the literal
+    the subject prints — and we match printed literals byte-for-byte.
+  </p>
+  <div class="call danger"><div class="ic">⛔</div><div class="bd">
+    <div class="t">Local warning: NordVPN</div>
+    <p>NordVPN is installed on this host. Its kill-switch inserts iptables rules ahead of everything else and will
+       blackhole <code>192.168.56.x</code>. <strong>Disconnect it before any demo</strong> or you'll spend an hour
+       debugging a network that's fine.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 7 ============ -->
+<section id="s7">
+  <h2><span class="num">7</span> Now the actual first slice — 1.1</h2>
+
+  <h3>What we are building</h3>
+  <p>
+    A <code>Vagrantfile</code> in <code>p1/</code> that defines <strong>one</strong> machine, from the Debian 13 box,
+    named and hostnamed <code>smbarkiS</code>. Nothing else. No IP, no RAM tuning, no scripts.
+  </p>
+
+  <h3>Why so small?</h3>
+  <p>
+    Because of the rule we agreed on: <strong>advance in the smallest slice that can be observed working.</strong>
+    If we wrote the whole Vagrantfile at once and <code>vagrant up</code> failed, the cause could be the box, the
+    provider, the network, the memory setting, the provisioning script, or a typo. <em>Six suspects.</em>
+    With slice 1.1 there is exactly one thing that can be wrong, so a failure <em>tells you what it is</em>.
+  </p>
+  <div class="call info"><div class="ic">⏱</div><div class="bd">
+    <p style="margin:0">This costs about ninety seconds and saves hours. Every slice after this adds one suspect at a time.</p>
+  </div></div>
+
+  <h3>What the file will contain, line by line</h3>
+  <div class="pre-wrap"><pre><code>Vagrant.configure("2") do |config|
+  config.vm.define "smbarkiS" do |server|
+    server.vm.box      = "debian/trixie64"
+    server.vm.hostname = "smbarkiS"
+  end
+end</code></pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Line</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>Vagrant.configure("2")</code></td>
+          <td>Use version 2 of Vagrant's configuration language. Not the Vagrant version — the <em>config schema</em>
+              version. Every modern Vagrantfile starts this way.</td></tr>
+      <tr><td><code>do |config|</code></td>
+          <td>Ruby block syntax. <code>config</code> is the object we hang settings on.
+              (A Vagrantfile is a real Ruby program, which is why you'll see loops and variables in later slices.)</td></tr>
+      <tr><td><code>config.vm.define&nbsp;"smbarkiS"</code></td>
+          <td>Declare a machine called <code>smbarkiS</code>. This is what makes multi-machine setups possible,
+              and what <code>vagrant ssh smbarkiS</code> refers to.</td></tr>
+      <tr><td><code>server.vm.box</code></td><td>Which pre-built image to boot.</td></tr>
+      <tr><td><code>server.vm.hostname</code></td><td>What the guest OS calls itself.</td></tr>
+    </tbody>
+  </table></div>
+  <p>
+    Note we're using <code>server.</code> inside the define block rather than <code>config.</code> — settings inside a
+    <code>define</code> apply to <em>that machine only</em>. In slice 1.3 we add a second define block, and this
+    separation is what keeps their settings apart.
+  </p>
+
+  <h3>What we will run</h3>
+  <div class="pre-wrap"><pre><code>cd p1
+vagrant up</code></pre></div>
+
+  <h3>What we expect to see</h3>
+  <div class="call info"><div class="ic">✍</div><div class="bd">
+    <p style="margin:0"><strong>Write this down <em>before</em> running it.</strong> Predicting the output is the point —
+       a surprise is information, but only if you predicted something first.</p>
+  </div></div>
+  <ol class="check">
+    <li><div><code>==&gt; smbarkiS: Box 'debian/trixie64' could not be found. Attempting to find and install…</code>
+      then a download progress bar. <strong>First run only</strong> — after that it's cached.</div></li>
+    <li><div><code>==&gt; smbarkiS: Creating domain with the following settings…</code> — “domain” is libvirt's word for a VM.</div></li>
+    <li><div><code>==&gt; smbarkiS: Setting hostname…</code></div></li>
+    <li><div><code>==&gt; smbarkiS: Rsyncing folder: /home/…/p1/ =&gt; /vagrant</code> — Vagrant shares the project folder
+      into the guest at <code>/vagrant</code>. Under libvirt this is a <strong>one-way rsync</strong>, host → guest.
+      Remember that; it matters much later (it's why we won't try to copy a file <em>out</em> of the guest).</div></li>
+    <li><div>No errors, and the prompt comes back.</div></li>
+  </ol>
+
+  <p>Then the proof:</p>
+  <div class="pre-wrap"><pre><code>vagrant ssh smbarkiS -c "hostname"</code></pre></div>
+  <p>Expected output, exactly:</p>
+  <div class="pre-wrap"><pre><code>smbarkiS</code></pre></div>
+  <p>And a look from the hypervisor's side:</p>
+  <div class="pre-wrap"><pre><code>virsh list --all</code></pre></div>
+  <p>Expected: a running domain whose name contains <code>smbarkiS</code>.</p>
+
+  <h3>How we'll know it's <em>actually</em> right</h3>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <div class="t">Three things, all observable</div>
+    <ul style="margin-bottom:0">
+      <li>The command printed <code>smbarkiS</code> — with the capital S. Not <code>debian</code>, not <code>smbarkis</code>.</li>
+      <li>It printed it <strong>without asking for a password</strong>. That's the SSH requirement, already met.</li>
+      <li><code>virsh</code> sees the domain — proving it's genuinely a KVM VM, not something Vagrant faked.</li>
+    </ul>
+  </div></div>
+
+  <h3>What could go wrong, and what it means</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td><em>“doesn't support the provider you requested”</em></td>
+          <td>Vagrant defaulted to VirtualBox; this box is libvirt-only</td>
+          <td><code>vagrant up --provider=libvirt</code>, or set <code>VAGRANT_DEFAULT_PROVIDER=libvirt</code></td></tr>
+      <tr><td><em>“Call to virDomainCreate failed”</em> / KVM permission denied</td>
+          <td>Your user isn't in the <code>libvirt</code> group, or <code>/dev/kvm</code> is missing inside the outer VM</td>
+          <td>Add to group and re-login; if <code>/dev/kvm</code> is missing, that's the Phase 0 gate failing — fall back to bare metal</td></tr>
+      <tr><td>Hangs at <em>“Waiting for domain to get an IP address”</em></td>
+          <td>libvirt's default network isn't started</td>
+          <td><code>virsh net-start default &amp;&amp; virsh net-autostart default</code></td></tr>
+      <tr><td><code>hostname</code> prints <code>debian</code></td>
+          <td><code>vm.hostname</code> didn't apply</td>
+          <td>Check the spelling of the key; <code>vagrant reload</code></td></tr>
+      <tr><td>Download crawls</td><td>It's ~500 MB, once</td><td>Wait. It's cached afterwards.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <p style="margin:0">If reality differs from the five expectations above <strong>in any way</strong>, we stop and
+       explain the gap before writing another line. That gap is where the learning actually is.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 8 ============ -->
+<section id="s8">
+  <h2><span class="num">8</span> What we are deliberately NOT doing in slice 1.1</h2>
+  <p>Being explicit about this is half the discipline:</p>
+  <ul class="nots">
+    <li><span class="x">✕</span><span>No <code>private_network</code> / static IP — that's <strong>1.2</strong></span></li>
+    <li><span class="x">✕</span><span>No memory or CPU settings — that's <strong>1.2</strong> (defaults are fine to just boot)</span></li>
+    <li><span class="x">✕</span><span>No second machine — that's <strong>1.3</strong></span></li>
+    <li><span class="x">✕</span><span>No K3s, no kubectl, no provisioning script — that's <strong>1.4+</strong></span></li>
+    <li><span class="x">✕</span><span>No <code>swapoff</code>, no <code>update-alternatives --set iptables</code>,
+        no <code>insert_key = false</code>, no extra plugins</span></li>
+  </ul>
+  <p>
+    That last row is the <strong>cargo-cult filter</strong>. Those lines appear in most Vagrantfiles you'll find online.
+    Every one of them is either obsolete (Debian-10-era advice), redundant (K3s already sets
+    <code>FailSwapOn: false</code>), or actively harmful.
+  </p>
+  <div class="call danger"><div class="ic">⛔</div><div class="bd">
+    <div class="t">The rule: if you cannot explain a line, delete it</div>
+    <p>At defense, an unexplainable line is worse than a missing one. A missing line might not be noticed.
+       An unexplainable line <em>will</em> be asked about.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 9 ============ -->
+<section id="s9">
+  <h2><span class="num">9</span> The order of operations for step one</h2>
+  <div class="phases">
+    <div class="phase">
+      <h4>Phase 0 — the foundation</h4>
+      <ol>
+        <li>Create the outer VM (virt-manager): Debian 13, 8 GB, 6 vCPU, 80 GB, <code>cpu mode = host-passthrough</code></li>
+        <li>Check <code>/dev/kvm</code> exists inside <span class="gate">GATE</span></li>
+        <li>Install Vagrant 2.4.9 (HashiCorp apt repo) + <code>vagrant-libvirt</code> plugin + <code>qemu-system-x86</code></li>
+        <li>Verify: <code>vagrant --version</code>, <code>virsh list</code></li>
+      </ol>
+    </div>
+    <div class="phase">
+      <h4>p1 slice 1.1</h4>
+      <ol start="5">
+        <li>Write <code>p1/Vagrantfile</code> (one machine)</li>
+        <li><code>vagrant up</code></li>
+        <li><code>vagrant ssh smbarkiS -c hostname</code></li>
+        <li>Confirm: <code>smbarkiS</code>, no password</li>
+        <li>Explain what we saw → then slice 1.2</li>
+      </ol>
+    </div>
+  </div>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">One note on step 3</div>
+    <p><strong>There is no <code>vagrant</code> package in Debian's or Ubuntu's repositories.</strong>
+       <code>apt install vagrant</code> fails or installs something ancient. You must add HashiCorp's apt repository.
+       This bites people on the evaluator's machine too, so it's worth remembering.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <h2><span class="num">10</span> Glossary</h2>
+  <p>Every term used above, in one line each.</p>
+  <dl class="gloss">
+    <div><dt>Host</dt><dd>The real, physical machine.</dd></div>
+    <div><dt>Guest</dt><dd>The operating system running inside a VM.</dd></div>
+    <div><dt>Hypervisor</dt><dd>The software that creates and runs VMs (KVM, VirtualBox).</dd></div>
+    <div><dt>KVM</dt><dd>Kernel-based Virtual Machine — Linux's built-in hypervisor.</dd></div>
+    <div><dt>QEMU</dt><dd>The emulator that provides the fake hardware; pairs with KVM for speed.</dd></div>
+    <div><dt>libvirt</dt><dd>Management API/daemon on top of KVM+QEMU. <code>virsh</code> is its CLI.</dd></div>
+    <div><dt>Domain</dt><dd>libvirt's word for a virtual machine.</dd></div>
+    <div><dt>Nested virtualisation</dt><dd>Running a hypervisor <em>inside</em> a VM.</dd></div>
+    <div><dt><code>/dev/kvm</code></dt><dd>The device file proving hardware virtualisation is available.</dd></div>
+    <div><dt>Vagrant</dt><dd>Tool that builds VMs from a text file.</dd></div>
+    <div><dt>Vagrantfile</dt><dd>That text file. Ruby. Capital V, no extension.</dd></div>
+    <div><dt>Box</dt><dd>A pre-built, bootable VM image Vagrant downloads.</dd></div>
+    <div><dt>Provider</dt><dd>Which hypervisor Vagrant drives.</dd></div>
+    <div><dt>Provisioner</dt><dd>A script Vagrant runs inside the guest after boot.</dd></div>
+    <div><dt><code>.vagrant/</code></dt><dd>Vagrant's local state — contains SSH private keys. Never commit.</dd></div>
+    <div><dt>NAT</dt><dd>Network mode where the guest reaches out but nothing reaches in. Always NIC 1.</dd></div>
+    <div><dt>Host-only network</dt><dd>A virtual switch joining host and guests only. Where <code>192.168.56.x</code> lives.</dd></div>
+    <div><dt>SSH key pair</dt><dd>Passwordless authentication: private key on the client, public key on the server.</dd></div>
+    <div><dt>RFC-1123</dt><dd>The DNS naming rules Kubernetes follows — the reason node names are lowercase.</dd></div>
+  </dl>
+</section>
+
+<hr>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <h2><span class="num">11</span> Test yourself</h2>
+  <p>If you can't answer these without looking, re-read the linked section before we move on.</p>
+
+  <details class="q"><summary><span class="qn">1</span><span>Why are we building an outer VM at all, and which line of the subject demands it?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>Subject p4, bullet 1, in bold: <em>“The whole project has to be done in a virtual machine.”</em>
+      This host is bare metal (<code>systemd-detect-virt</code> → <code>none</code>), so we build one big Debian VM
+      and do everything inside it. → <a href="#s2">§2</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">2</span><span>Why libvirt and not VirtualBox — give two reasons, one specific to this machine.</span><span class="chev">›</span></summary>
+    <div class="ans"><p>(1) Kernel 7.0.0-28-generic: Ubuntu's packaged VirtualBox 7.0.16 can't build its modules against it.
+      (2) We need nested virtualisation, and KVM-in-KVM is reliable while VirtualBox-in-KVM is not.
+      Permitted by p4's blue box. → <a href="#s1">§1.1</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">3</span><span>What is the difference between <code>vm.define</code> and <code>vm.hostname</code>? Which one does <code>vagrant ssh smbarkiS</code> use?</span><span class="chev">›</span></summary>
+    <div class="ans"><p><code>vm.define</code> is Vagrant's label for the machine — that's what <code>vagrant ssh smbarkiS</code>
+      resolves. <code>vm.hostname</code> is what the guest OS calls itself, what <code>hostname</code> prints.
+      They're independent; we set both to <code>smbarkiS</code>. → <a href="#s4">§4</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">4</span><span>Where does the passwordless SSH come from? How many lines did we write for it?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>Zero lines. Vagrant generates a per-machine keypair on first boot, injects the public half into
+      the guest and keeps the private half in <code>.vagrant/</code>. Adding <code>insert_key = false</code> would
+      <em>downgrade</em> this to the well-known insecure key. → <a href="#s5">§5</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">5</span><span>Why will both VMs have the IP <code>10.0.2.15</code>, and why doesn't that break anything yet?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>NIC 1 is always Vagrant-controlled NAT, and every NAT guest gets the same address in its own
+      private world. It doesn't conflict — but it's useless for VM-to-VM traffic, which is why slice 1.2 adds a second
+      NIC on <code>192.168.56.x</code>. → <a href="#s6">§6</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">6</span><span>Why is slice 1.1 not “write the whole Vagrantfile”?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>Because a full Vagrantfile that fails has six possible causes. A five-line one has one.
+      Smallest observable slice = a failure that identifies itself. → <a href="#s7">§7</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">7</span><span>Name three lines commonly found in Vagrantfiles that we refuse to write, and why.</span><span class="chev">›</span></summary>
+    <div class="ans"><p><code>swapoff -a</code> (K3s sets <code>FailSwapOn: false</code>),
+      <code>update-alternatives --set iptables iptables-legacy</code> (Debian-10-era; Debian 13 ships a fine iptables),
+      <code>config.ssh.insert_key = false</code> (a security regression). Anything unexplainable gets deleted.
+      → <a href="#s8">§8</a></p></div></details>
+</section>
+
+<hr>
+
+<section id="next" style="padding-top:40px">
+  <div class="call ok"><div class="ic">→</div><div class="bd">
+    <div class="t">Next after this: slice 1.2</div>
+    <p style="margin-bottom:0">Add the static IP <code>192.168.56.110</code> on a second NIC, plus the provider block
+      (1 CPU, 1024 MB). Its proof: <code>ip -4 a</code> inside the guest shows <code>192.168.56.110</code>, and
+      <code>ping 192.168.56.110</code> works <strong>from the host</strong>.</p>
+  </div></div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  // ---- theme ----
+  var root=document.documentElement, L=document.getElementById('tLight'), D=document.getElementById('tDark');
+  function paint(t){
+    root.setAttribute('data-theme',t);
+    try{localStorage.setItem('iot-theme',t)}catch(e){}
+    L.classList.toggle('on',t==='light'); D.classList.toggle('on',t==='dark');
+  }
+  var saved=null; try{saved=localStorage.getItem('iot-theme')}catch(e){}
+  paint(saved || (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+  L.onclick=function(){paint('light')}; D.onclick=function(){paint('dark')};
+
+  // ---- progress bar ----
+  var bar=document.getElementById('progress');
+  function prog(){
+    var h=document.documentElement.scrollHeight-window.innerHeight;
+    bar.style.width=(h>0?(window.scrollY/h*100):0)+'%';
+  }
+  window.addEventListener('scroll',prog,{passive:true}); prog();
+
+  // ---- scroll spy ----
+  var links=[].slice.call(document.querySelectorAll('#nav a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))}).filter(Boolean);
+  function spy(){
+    var best=null, bestTop=-1e9;
+    secs.forEach(function(s){
+      var t=s.getBoundingClientRect().top-90;
+      if(t<=0 && t>bestTop){bestTop=t;best=s}
+    });
+    if(!best) best=secs[0];
+    links.forEach(function(a){a.classList.toggle('active', a.getAttribute('href')==='#'+best.id)});
+  }
+  window.addEventListener('scroll',spy,{passive:true}); spy();
+
+  // ---- copy buttons ----
+  [].forEach.call(document.querySelectorAll('.pre-wrap'),function(w){
+    var b=document.createElement('button'); b.className='copy'; b.textContent='copy';
+    b.onclick=function(){
+      var txt=w.querySelector('code').innerText;
+      navigator.clipboard.writeText(txt).then(function(){
+        b.textContent='copied'; b.classList.add('done');
+        setTimeout(function(){b.textContent='copy'; b.classList.remove('done')},1400);
+      });
+    };
+    w.appendChild(b);
+  });
+
+  // ---- mobile nav ----
+  var sb=document.getElementById('sidebar'), sc=document.getElementById('scrim'), mb=document.getElementById('menuBtn');
+  function close(){sb.classList.remove('open'); sc.classList.remove('open')}
+  mb.onclick=function(){sb.classList.toggle('open'); sc.classList.toggle('open')};
+  sc.onclick=close;
+  links.forEach(function(a){a.addEventListener('click',close)});
+})();
+</script>
+</body>
+</html>
