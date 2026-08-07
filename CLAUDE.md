@@ -61,7 +61,9 @@ Branch per unit (`p1p2`, `p3`, `bonus`), merge to `main` only after the gate. Un
 | p3 public repo | name must contain `smbarki`, must be **public** |
 | Bonus namespace | `gitlab` |
 
-Also mandatory: latest stable distro, passwordless SSH to both VMs, and the whole project run inside a virtual machine (p4).
+Also mandatory: latest stable distro, passwordless SSH to both VMs, and the whole project run inside a virtual machine.
+
+**The outer VM is mandated three times, not once.** p4 bullet 1: *"The whole project has to be done in a virtual machine."* p4 blue box: *"You can use any tools you want to set up your **host virtual machine** as well as the provider used in Vagrant"* — the phrase "host virtual machine" only means something if a VM hosts the project. And p12: *"install K3d on **your virtual machine**"* — p3 uses no Vagrant at all, so the VM it refers to can only be the outer one. Building on bare metal contradicts all three.
 
 ## Pinned versions (verified 2026-08-02 — re-check the day before defense)
 
@@ -165,6 +167,8 @@ argocd app get wil-playground                                    # Synced, Healt
 ## Architecture notes and traps
 
 - **`--node-ip` is the one flag that matters.** Vagrant forces NIC 1 to be NAT (that is how `vagrant ssh` port-forwards) and every VM gets the identical `10.0.2.15`. Without `--node-ip`, both nodes register with it; the agent still joins so `get nodes` reads Ready, and the breakage stays hidden until p2's traffic test. `--flannel-iface` is cheap insurance. **`--advertise-address` already defaults to `--node-ip`** (noise). **`--bind-address=192.168.56.110` is harmful** — the apiserver stops listening on loopback while the generated kubeconfig still targets `127.0.0.1:6443`, breaking your own kubectl.
+- **"A dedicated IP on the primary network interface" (p6) does not mean NIC 1.** Vagrant owns NIC 1 and forces it to NAT, so `192.168.56.110` can only land on NIC 2 — and the subject knows it: p8's info box names *"enp0s8, enp0s9"* as the interfaces to inspect, which are the **second and third** adapters, never the first (`enp0s3`). Read "primary" as "the interface the cluster actually uses". Defense answer: *"NIC 1 is Vagrant's NAT link and is identical on every VM; the dedicated IP is on the host-only interface, which is the one K3s advertises via `--node-ip`."*
+- **Never hardcode the interface name — p8 says so in an info box.** *"Modern Linux distributions use predictable network interface names (e.g., enp0s8, enp0s9) instead of eth0/eth1… Adapt the commands according to your system's actual interface names."* It is `eth1` on bento boxes (they set `net.ifnames=0`) but `enp1s0`/`enp2s0` under libvirt virtio. Derive it from the IP at runtime instead.
 - **Node names are lowercased.** The VM hostname stays `smbarkiS`, but Kubernetes canonicalises node names, so `kubectl get nodes` shows `smbarkis`. This is not a bug — rehearse the explanation. Never set `--node-name=smbarkiS`; k3s refuses to start on an uppercase RFC-1123 name.
 - **Pre-seed the join token; do not copy the generated one.** Define it once in the Vagrantfile and pass it to *both* provisioners via `env:`. Copying `/var/lib/rancher/k3s/server/node-token` through `/vagrant` commits a live credential into the repo, leaves a stale token that survives `vagrant destroy` (agent then fails with `token CA hash does not match`), and does not work at all under libvirt where the synced folder is one-way rsync. Defense answer: *"I inverted the dependency — instead of the agent reading a token the server generated, I told the server which token to use."*
 - **kubectl needs no separate install.** The K3s installer symlinks `/usr/local/bin/kubectl → k3s`. That satisfies p6's yellow box, and `ls -l /usr/local/bin/kubectl` is the proof. Installing it from the Kubernetes apt repo adds an external repo and invites version skew.
