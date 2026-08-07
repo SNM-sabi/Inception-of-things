@@ -181,7 +181,8 @@ argocd app get wil-playground                                    # Synced, Healt
 - **Pre-create `dev` *and* set `CreateNamespace=true`**, so p13's `kubectl get ns` is true even mid-sync. But never put a `Namespace` object in the watched repo alongside `prune: true` — a bad commit would delete the namespace and everything in it.
 - **GitLab chart 10.x removed the bundled PostgreSQL, Redis and MinIO** and needs PostgreSQL 17 plus Gateway API. Every older tutorial is now wrong. Use the `gitlab/gitlab-ce` Omnibus container instead — same official artifact, self-contained, ~3 GB instead of 6–8 GB.
 - **Argo CD resolves `repoURL` through CoreDNS**, which knows nothing about `/etc/hosts`, `nip.io` or `192.168.56.x`. For the bonus, use one canonical URL valid inside and outside the cluster: `gitlab.gitlab.svc.cluster.local` on port 80.
-- **NordVPN is installed on this host.** Its kill-switch iptables rules pre-empt Docker's chains and blackhole `192.168.56.x`. Disconnect before any demo.
+- **NordVPN is NOT installed** (checked 2026-08-07: no dpkg/snap/flatpak package, no binary, no unit — only a leftover `nordvpn` group from a past install). The old warning stands only if it is ever reinstalled: its kill-switch iptables rules pre-empt Docker's chains and blackhole `192.168.56.x`. Nothing to disconnect today.
+- **Host facts verified 2026-08-07** — Ubuntu 24.04.4 LTS, kernel 7.0.0-28-generic, Intel i7-10700T (VT-x), 16 CPUs, 15 GiB RAM, 115 GiB free on `/`. `kvm_intel nested=Y` and `/dev/kvm` carries an ACL granting `sabdark` rw directly, so KVM works without the `kvm` group. No `192.168.*` route exists on the host, so neither `192.168.56.0/24` nor libvirt's `192.168.122.0/24` can collide. Networking is WiFi (`wlp0s20f3`, `10.32.0.0/16`); `enp2s0` is down.
 
 ## Questions the evaluator will ask
 
