@@ -68,14 +68,24 @@ Also mandatory: latest stable distro, passwordless SSH to both VMs, and the whol
 ## Pinned versions (verified 2026-08-02 — re-check the day before defense)
 
 ```
-debian/trixie64   13.20260519.1   (libvirt; official Debian)
-bento/debian-13   202510.26.0     (virtualbox fallback)
-Vagrant           2.4.9           (no vagrant package exists in Debian/Ubuntu repos)
-K3s               v1.36.2+k3s1    (bundles Traefik v3.7.4)
-k3d               v5.9.0
-Argo CD           v3.4.6
-GitLab CE         19.2.1-ce.0     (19.3 lands ~2026-08-20)
+Outer VM (machine B) — created on the bare-metal host
+  Debian cloud image  debian-13-genericcloud-amd64, build 20260803-2559 (Debian 13.6)
+                      SHA512 769562604ecaac26…4ac4ed32e1 — verified against cloud.debian.org
+  Vagrant             2.3.7+git20230731.5fc64cde+dfsg-3+b1   ← Debian trixie's own package
+  vagrant-libvirt     0.12.2-4                               ← Debian trixie's own package
+  libvirt / QEMU      11.3.0-3+deb13u2 / 1:10.0.11+ds-0+deb13u1
+  Docker CE           5:29.7.2-1~debian.13~trixie
+
+Inner VMs and clusters
+  debian/trixie64     13.20260519.1   (libvirt provider only — no virtualbox artifact)
+  K3s                 v1.36.3+k3s1    (stable channel; bundles Traefik v3.7.8)
+  k3d                 v5.9.0
+  Argo CD             v3.4.6          (v3.5.0 exists but is days old; re-check before defense)
+  GitLab CE           19.2.1-ce.0     (19.3 lands ~2026-08-20; never use :latest)
+  traefik/whoami      v1.12.0
 ```
+
+**Correction, 2026-08-07 — "no `vagrant` package exists in Debian/Ubuntu repos" was wrong.** Debian trixie ships both `vagrant` (2.3.7+git20230731.5fc64cde+dfsg-3) and `vagrant-libvirt` (0.12.2-4); confirmed on packages.debian.org. Inside the outer VM we install them with plain `apt`, **not** from HashiCorp's apt repo. One deterministic apt transaction, no RubyGems fetch, and no native gem compilation against Vagrant's embedded Ruby — which is the fragile step that breaks clean runs. Debian's `vagrant-libvirt` 0.12.2 *is* the newest upstream release (upstream has had no commit since 2023-12-27), so we lose nothing. The statement was true of Ubuntu at some point and got over-generalised; it is false for Debian 13.
 
 ## Required directory layout
 
@@ -108,13 +118,13 @@ vagrant destroy -f              # always destroy before re-testing from scratch
 ### K3s inside the VMs
 ```bash
 # server — the token is PRE-SEEDED, not copied from the server (see traps)
-curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.36.2+k3s1" K3S_TOKEN="$K3S_TOKEN" \
+curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.36.3+k3s1" K3S_TOKEN="$K3S_TOKEN" \
   INSTALL_K3S_EXEC="server --node-ip=${NODE_IP} --flannel-iface=${IFACE} \
   --write-kubeconfig-mode=0644 --tls-san=${NODE_IP}" sh -s -
 
 # agent — gate on the server being reachable first
 until curl -sfk "https://192.168.56.110:6443/cacerts" >/dev/null 2>&1; do sleep 3; done
-curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.36.2+k3s1" \
+curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.36.3+k3s1" \
   K3S_URL="https://192.168.56.110:6443" K3S_TOKEN="$K3S_TOKEN" \
   INSTALL_K3S_EXEC="agent --node-ip=${NODE_IP} --flannel-iface=${IFACE}" sh -s -
 ```
@@ -166,13 +176,15 @@ argocd app get wil-playground                                    # Synced, Healt
 
 ## Architecture notes and traps
 
+- **Three network layers — know which machine each command runs on.** The laptop (machine A) reaches the outer VM over libvirt's `192.168.122.0/24`. The p1/p2 VMs live on `192.168.56.0/24`, a network created by vagrant-libvirt **inside** the outer VM (machine B). That range is reachable from B and not from A, without extra routing we are not going to add. **Every `curl -H "Host: app1.com" http://192.168.56.110` in the subject and in our checklists runs from inside machine B — including live at the defense.** "From the host" always means B, never the laptop.
+- **Never use `virt-install --cloud-init` to seed the outer VM.** It writes the CD-ROM and the `ds=nocloud` SMBIOS hint into the *transient* boot XML only, then deletes the ISO it generated from `/var/lib/libvirt/boot` before returning. The persistent domain has neither. A reboot before cloud-init finishes leaves a VM with no user, no key and no password, recoverable only by `undefine` and a full rebuild. Build the NoCloud seed ISO ourselves and attach it permanently as a SATA cdrom, plus `--sysinfo smbios,system.serial=ds=nocloud` as a second, independent datasource hint.
 - **`--node-ip` is the one flag that matters.** Vagrant forces NIC 1 to be NAT (that is how `vagrant ssh` port-forwards) and every VM gets the identical `10.0.2.15`. Without `--node-ip`, both nodes register with it; the agent still joins so `get nodes` reads Ready, and the breakage stays hidden until p2's traffic test. `--flannel-iface` is cheap insurance. **`--advertise-address` already defaults to `--node-ip`** (noise). **`--bind-address=192.168.56.110` is harmful** — the apiserver stops listening on loopback while the generated kubeconfig still targets `127.0.0.1:6443`, breaking your own kubectl.
 - **"A dedicated IP on the primary network interface" (p6) does not mean NIC 1.** Vagrant owns NIC 1 and forces it to NAT, so `192.168.56.110` can only land on NIC 2 — and the subject knows it: p8's info box names *"enp0s8, enp0s9"* as the interfaces to inspect, which are the **second and third** adapters, never the first (`enp0s3`). Read "primary" as "the interface the cluster actually uses". Defense answer: *"NIC 1 is Vagrant's NAT link and is identical on every VM; the dedicated IP is on the host-only interface, which is the one K3s advertises via `--node-ip`."*
 - **Never hardcode the interface name — p8 says so in an info box.** *"Modern Linux distributions use predictable network interface names (e.g., enp0s8, enp0s9) instead of eth0/eth1… Adapt the commands according to your system's actual interface names."* It is `eth1` on bento boxes (they set `net.ifnames=0`) but `enp1s0`/`enp2s0` under libvirt virtio. Derive it from the IP at runtime instead.
 - **Node names are lowercased.** The VM hostname stays `smbarkiS`, but Kubernetes canonicalises node names, so `kubectl get nodes` shows `smbarkis`. This is not a bug — rehearse the explanation. Never set `--node-name=smbarkiS`; k3s refuses to start on an uppercase RFC-1123 name.
 - **Pre-seed the join token; do not copy the generated one.** Define it once in the Vagrantfile and pass it to *both* provisioners via `env:`. Copying `/var/lib/rancher/k3s/server/node-token` through `/vagrant` commits a live credential into the repo, leaves a stale token that survives `vagrant destroy` (agent then fails with `token CA hash does not match`), and does not work at all under libvirt where the synced folder is one-way rsync. Defense answer: *"I inverted the dependency — instead of the agent reading a token the server generated, I told the server which token to use."*
 - **kubectl needs no separate install.** The K3s installer symlinks `/usr/local/bin/kubectl → k3s`. That satisfies p6's yellow box, and `ls -l /usr/local/bin/kubectl` is the proof. Installing it from the Kubernetes apt repo adds an external repo and invites version skew.
-- **Traefik ships with K3s** (v3.7.4). p2 needs only Deployment + Service + Ingress. A plain `networking.k8s.io/v1` Ingress is sufficient — do not use `IngressRoute`. Set `ingressClassName: traefik`; never the deprecated `kubernetes.io/ingress.class` annotation.
+- **Traefik ships with K3s** (v3.7.8). p2 needs only Deployment + Service + Ingress. A plain `networking.k8s.io/v1` Ingress is sufficient — do not use `IngressRoute`. Set `ingressClassName: traefik`; never the deprecated `kubernetes.io/ingress.class` annotation.
 - **app3 must be `spec.defaultBackend`, in a single Ingress object.** A host-less rule *appears* to work, but Traefik v3 orders routers by rule-string length, so it only loses to `app1.com` by accident. `defaultBackend` compiles to priority `math.MinInt32` and cannot be outranked. `default-router`/`default-backend` are global singletons, so a second Ingress declaring one is silently dropped. **Never add `traefik.ingress.kubernetes.io/router.priority`** to that object — it applies to every router the Ingress produces, including the default one, and app3 would then swallow app1.com and app2.com.
 - **Port 80 reaches the host for free.** Traefik's Service is `LoadBalancer`; K3s's ServiceLB runs a DaemonSet taking hostPort 80/443 on the node. Nothing else may claim those ports.
 - **K3d port maps are fixed at create time.** `--port-add` exists but is EXPERIMENTAL and recreates the load-balancer container. Forgetting `-p "8888:80@loadbalancer"` means deleting and recreating the cluster mid-defense.
