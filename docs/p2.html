@@ -222,12 +222,12 @@ details.q .ans > :first-child{margin-top:0}
 <section id="s0">
   <h2><span class="num">0</span> Where we are</h2>
   <ul class="status">
-    <li class="here"><span class="s">⏳</span><span><strong>2.1</strong> One VM, K3s server, <strong>Traefik on</strong> — proof: curl <code>.110</code> → Traefik's 404 — <strong>building</strong></span></li>
-    <li class="todo"><span class="s">○</span><span><strong>2.2</strong> app1 alone: Deployment + Service — curl its ClusterIP from inside</span></li>
-    <li class="todo"><span class="s">○</span><span><strong>2.3</strong> First Ingress rule: <code>app1.com</code> — curl with Host header, <strong>from the host</strong></span></li>
-    <li class="todo"><span class="s">○</span><span><strong>2.4</strong> app2 with <strong>3 replicas</strong> — 9 curls hit 3 different pods</span></li>
-    <li class="todo"><span class="s">○</span><span><strong>2.5</strong> app3 as the <strong>default</strong> — no/unknown Host → app3</span></li>
-    <li class="todo"><span class="s">○</span><span><strong>2.6</strong> Everything from <code>confs/</code> + the clean-run gate</span></li>
+    <li class="done"><span class="s">✅</span><span><strong>2.1</strong> One VM, K3s server, Traefik on — 5m10; the predicted 404, observed</span></li>
+    <li class="done"><span class="s">✅</span><span><strong>2.2</strong> app1: Deployment + Service — ClusterIP answers <code>Name: app1</code></span></li>
+    <li class="done"><span class="s">✅</span><span><strong>2.3</strong> First Ingress rule — <code>app1.com</code> routes from iot-host; controls 404</span></li>
+    <li class="done"><span class="s">✅</span><span><strong>2.4</strong> app2 × 3 replicas — 9 curls → <strong>3/3/3</strong> across three pod names</span></li>
+    <li class="done"><span class="s">✅</span><span><strong>2.5</strong> app3 as default — after one real Traefik surprise (§4)</span></li>
+    <li class="here"><span class="s">⬅</span><span><strong>2.6</strong> Everything from <code>confs/</code> + the clean-run gate — <strong>next</strong></span></li>
   </ul>
 </section>
 
@@ -338,12 +338,14 @@ curl (anything else)     ──┘      (the door)    │  └──► app2  (3
        construct that says exactly that.</p>
   </div></div>
   <div class="call warn"><div class="ic">⚠</div><div class="bd">
-    <div class="t">One single Ingress object</div>
-    <p>Traefik treats the default backend as a global singleton — a second Ingress declaring one is
-       silently dropped. And practically: p11's red box says <em>"The Ingress is not displayed here
-       on purpose. You will have to show it to your evaluators"</em> — one object means
-       <code>kubectl describe ingress</code> puts the whole routing story on one screen while you
-       narrate it.</p>
+    <div class="t">Two Ingress objects — the split is Traefik's requirement, observed live</div>
+    <p>We planned one object holding both the rules and the default. Reality: <strong>Traefik v3.7
+       ignores <code>defaultBackend</code> when the same Ingress also carries rules</strong> — the
+       API object showed the default, the router never materialised, bare-IP curl stayed 404. Moving
+       the default into its own rule-less Ingress fixed it instantly. The real singleton constraint
+       is on the <em>default declaration</em>: only one Ingress may declare one (a second is silently
+       dropped). p11's walkthrough is unharmed — <code>kubectl describe ingress</code> with no name
+       shows both objects on one screen.</p>
   </div></div>
 </section>
 

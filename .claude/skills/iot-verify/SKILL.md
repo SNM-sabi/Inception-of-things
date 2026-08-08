@@ -40,10 +40,10 @@ curl -s -H "Host: app1.com" http://192.168.56.110
 curl -s -H "Host: app2.com" http://192.168.56.110
 curl -s http://192.168.56.110
 curl -s -H "Host: nonsense.com" http://192.168.56.110
-for i in $(seq 9); do curl -s -H "Host: app2.com" http://192.168.56.110 | head -1; done | sort | uniq -c
+for i in $(seq 9); do curl -s -H "Host: app2.com" http://192.168.56.110 | grep "^Hostname:"; done | sort | uniq -c
 ```
 
-Checks: the three curls must return three **visibly different** apps. Both the bare-IP and the nonsense-Host requests must return app3. `kubectl get deploy` must show app-two at **3/3**, app-one and app-three at 1/1. The replica loop must show **3 distinct pod names** — one name repeated nine times means the Service is not load-balancing. All curls run **from the host**, never from inside the VM.
+Checks: the three curls must return three **visibly different** apps. Both the bare-IP and the nonsense-Host requests must return app3. `kubectl get deploy` must show app-two at **3/3**, app-one and app-three at 1/1. The replica loop greps the `Hostname:` line (with `WHOAMI_NAME` set it is line 2 — `head -1` would show the identical `Name:` and produce a false FAIL) and must show **3 distinct pod names**; one name repeated nine times means the Service is not load-balancing. All curls run **from the host**, never from inside the VM.
 
 ## p3 — K3d + Argo CD
 

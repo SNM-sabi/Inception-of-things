@@ -250,7 +250,7 @@ From the **host** browser: `192.168.56.110` with `Host: app1.com` → app1, `app
 
 **Never add `traefik.ingress.kubernetes.io/router.priority` to that object.** It applies to *every* router the Ingress produces, including `default-router`, destroying the MinInt32 guarantee — app3 would then swallow app1.com and app2.com. (Traefik's own docs still carry an obsolete note suggesting this; the source disagrees.)
 
-**`traefik/whoami:v1.12.0` for all three apps.** One 5 MB pull on a small VM; `WHOAMI_NAME=app1` gives identity; and crucially **every response's first line is `Hostname: app-two-xxxxx-yyyyy`**, so `for i in $(seq 9); do curl -s -H "Host: app2.com" 192.168.56.110 | head -1; done | sort | uniq -c` *proves* the 3 replicas are load-balancing. `paulbouwer/hello-kubernetes` is what the p11 screenshot uses, but it is amd64-only and untouched since 2021 — keep it as the second choice if an evaluator insists on matching the screenshot exactly.
+**`traefik/whoami:v1.12.0` for all three apps.** One 5 MB pull on a small VM; `WHOAMI_NAME=app1` gives identity; and crucially **every response carries `Hostname: app-two-xxxxx-yyyyy`** (line 2 when WHOAMI_NAME is set), so `for i in $(seq 9); do curl -s -H "Host: app2.com" 192.168.56.110 | grep "^Hostname:"; done | sort | uniq -c` *proves* the 3 replicas are load-balancing. `paulbouwer/hello-kubernetes` is what the p11 screenshot uses, but it is amd64-only and untouched since 2021 — keep it as the second choice if an evaluator insists on matching the screenshot exactly.
 
 **Set `ingressClassName: traefik`.** K3s's bundled Traefik registers itself as the default IngressClass, so a class-less Ingress still works — but naming it costs nothing, survives a missing default annotation, and is a talking point. Never use the deprecated `kubernetes.io/ingress.class` annotation.
 
@@ -409,7 +409,7 @@ cd ../p2 && vagrant up
 curl -H "Host: app1.com" http://192.168.56.110          # app1
 curl -H "Host: app2.com" http://192.168.56.110          # app2
 curl http://192.168.56.110                              # app3
-for i in $(seq 9); do curl -s -H "Host: app2.com" http://192.168.56.110 | head -1; done | sort | uniq -c
+for i in $(seq 9); do curl -s -H "Host: app2.com" http://192.168.56.110 | grep "^Hostname:"; done | sort | uniq -c
 vagrant ssh smbarkiS -c "kubectl describe ingress"      # show it — p11 red box
 vagrant destroy -f
 
