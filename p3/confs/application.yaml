@@ -1,0 +1,42 @@
+---
+# The Application object lives in the ARGOCD namespace but deploys into DEV.
+# This file is the ONLY manifest p3/confs/ may contain: the Deployment,
+# Service and Ingress live in the separate public GitOps repository that
+# `source.repoURL` points at. Keeping a copy here would make the evaluator
+# unable to tell which one is live (CLAUDE.md, "Part 3 uses two repositories").
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wil-playground
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    # Public GitHub repo whose name contains a group member's login (subject p12).
+    # Override at apply time with:  REPO_URL=... bash p3/scripts/create_cluster.sh
+    repoURL: https://github.com/CHANGE_ME/CHANGE_ME.git
+    targetRevision: HEAD
+    # A folder, never a single file: Argo CD globs *.yaml, and pointing at the
+    # repo root would sweep in README.md and produce a noisy manifest set.
+    path: manifests
+
+  destination:
+    server: https://kubernetes.default.svc
+    # Declared once, here. The manifests in the GitOps repo carry no namespace
+    # of their own, so there is no second place for it to drift out of sync.
+    namespace: dev
+
+  syncPolicy:
+    automated:
+      prune: true       # delete objects removed from Git
+      selfHeal: true    # revert a manual `kubectl edit` — proves Git is the source of truth
+      allowEmpty: false # a mis-pushed commit must not empty the manifest set
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
