@@ -27,7 +27,7 @@ vagrant ssh smbarkiSW -c "systemctl is-active k3s-agent"
 ping -c1 192.168.56.110 && ping -c1 192.168.56.111
 ```
 
-Checks: INTERNAL-IP column must read **192.168.56.110** and **192.168.56.111** — never `10.0.2.15`. ROLES must be `control-plane,master` and `<none>`. Node NAMEs are lowercase (`smbarkis`) — that is correct, not a failure. Both `vagrant ssh` calls must succeed without a password prompt.
+Checks: INTERNAL-IP column must read **192.168.56.110** and **192.168.56.111** — never a `192.168.121.x` management-network lease. ROLES must be `control-plane` and `<none>` — **not** `control-plane,master`: the legacy `master` label was removed upstream and K3s v1.36 no longer applies it (verified live 2026-08-08; older subject screenshots still show both). Node NAMEs are lowercase (`smbarkis`) — that is correct, not a failure. Both `vagrant ssh` calls must succeed without a password prompt.
 
 ## p2 — one VM, three apps, Ingress
 

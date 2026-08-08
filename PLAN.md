@@ -180,7 +180,7 @@ Owned jointly; it is the only work that happens before the split.
 | 1.2 | Add `private_network` static IP + provider block (name, 1024 MB, 1 cpu) | `ip -4 a` shows 192.168.56.110 on the 2nd NIC; `virsh list` shows the domain name |
 | 1.3 | Add the second machine (512 MB) | `vagrant status` → both running; `ping 192.168.56.111` from the host |
 | 1.4 | `scripts/server.sh` installs K3s in **server** mode with `--node-ip` | `kubectl get nodes -o wide` → 1 node Ready, INTERNAL-IP **192.168.56.110** |
-| 1.5 | `scripts/worker.sh` installs K3s in **agent** mode and joins | `kubectl get nodes -o wide` → 2 nodes Ready, correct IPs, ROLES `control-plane,master` / `<none>` |
+| 1.5 | `scripts/worker.sh` installs K3s in **agent** mode and joins | `kubectl get nodes -o wide` → 2 nodes Ready, correct IPs, ROLES `control-plane` / `<none>` (K3s v1.36 no longer applies the legacy master label) |
 | 1.6 | kubeconfig readable by `vagrant`; `/etc/profile.d/k3s.sh` | `vagrant ssh smbarkiS -c "kubectl get nodes"` — no sudo, no flags |
 | 1.7 | Full destroy/up clean run | Zero manual steps, 2 nodes Ready at the end |
 
@@ -214,7 +214,7 @@ Vagrant forces NIC 1 to be NAT (that is how `vagrant ssh` port-forwards), and ev
 | Set `config.ssh.insert_key = false` or add your own keys | Vagrant already generates a per-machine keypair on first boot — that **is** the passwordless-SSH requirement | A security regression that reimplements what already worked |
 
 ### Gate for p1
-`vagrant destroy -f && vagrant up` from clean → `kubectl get nodes -o wide` shows two `Ready` nodes at 192.168.56.110 and .111, same version, roles `control-plane,master` and `<none>`. Both `vagrant ssh` targets work with no password. Then commit.
+`vagrant destroy -f && vagrant up` from clean → `kubectl get nodes -o wide` shows two `Ready` nodes at 192.168.56.110 and .111, same version, roles `control-plane` and `<none>`. Both `vagrant ssh` targets work with no password. Then commit.
 
 ---
 

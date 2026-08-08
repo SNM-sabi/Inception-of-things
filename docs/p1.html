@@ -231,8 +231,8 @@ details.q .ans > :first-child{margin-top:0}
     <li class="done"><span class="s">✅</span><span><strong>1.1</strong> One machine, box + hostname — <code>hostname</code> → <code>smbarkiS</code>, passwordless</span></li>
     <li class="done"><span class="s">✅</span><span><strong>1.2</strong> Static IP <code>.110</code> on <code>eth1</code>, 1 CPU / 1024 MB, domain named <code>smbarkiS</code></span></li>
     <li class="done"><span class="s">✅</span><span><strong>1.3</strong> Second machine <code>smbarkiSW</code>, <code>.111</code>, 512 MB — network reused, VM↔VM ping works</span></li>
-    <li class="here"><span class="s">⬅</span><span><strong>1.4</strong> K3s <strong>server</strong> on smbarkiS — next</span></li>
-    <li class="todo"><span class="s">○</span><span><strong>1.5</strong> K3s <strong>agent</strong> on smbarkiSW, joined cluster</span></li>
+    <li class="done"><span class="s">✅</span><span><strong>1.4</strong> K3s server on smbarkiS — 1m02, Ready, <code>.110</code>, lowercase name, all proofs green</span></li>
+    <li class="here"><span class="s">⬅</span><span><strong>1.5</strong> K3s <strong>agent</strong> on smbarkiSW, joined cluster — next</span></li>
     <li class="todo"><span class="s">○</span><span><strong>1.6–1.7</strong> kubectl comfort + the clean-run gate</span></li>
   </ul>
 </section>
@@ -413,22 +413,56 @@ end</code></pre></div>
 
 <!-- ============ 5 ============ -->
 <section id="s5">
-  <h2><span class="num">5</span> What's next — and why you already understand it</h2>
+  <h2><span class="num">5</span> Slice 1.4 as built — K3s server, and what the proofs showed</h2>
   <p>
-    Slice 1.4 installs K3s on the server. The two ideas that decide whether it works, you've now
-    <em>seen</em> rather than read:
+    The server block now runs <code>scripts/server.sh</code> (a <code>scripts/</code> folder is
+    mandated by p17's yellow box; <code>provision "shell", path:</code> is the subject's own p7
+    pattern). The script, in plain words: find which interface carries <code>.110</code> (never
+    hardcoded — p8's info box), install K3s <strong>pinned</strong> to <code>v1.36.3+k3s1</code> in
+    server mode with the <strong>pre-seeded token</strong> and <code>--node-ip</code>, make kubectl
+    work without sudo, and refuse to finish until the node is actually <code>Ready</code>.
+    Install took <strong>1m02</strong>; the node was Ready one second after registering.
   </p>
-  <ol>
-    <li><strong><code>--node-ip 192.168.56.110</code></strong> — because of the eth0 lesson above.
-      K3s would otherwise advertise a DHCP lease that changes on every rebuild, and the subject's p8
-      screenshots explicitly show the wrong-IP configuration as the <em>broken</em> one.</li>
-    <li><strong>The join token is pre-seeded, not copied.</strong> The server will be <em>told</em>
-      which token to use (a variable set in the Vagrantfile and passed to both machines), instead of
-      the worker fishing the generated one out of the server's filesystem. Reasons you can now picture:
-      <code>/vagrant</code> is a live NFS mount of the git repo — a guest-written token file would land
-      next to the Vagrantfile instantly — and a stale copied token survives <code>vagrant destroy</code>
-      and breaks the next join with a CA-hash mismatch.</li>
-  </ol>
+  <p>What the proof commands showed — four moments you'll want at the defense:</p>
+  <ul>
+    <li><strong><code>kubectl get nodes</code> with no sudo, no flags, no path</strong> — because the
+      installer symlinked <code>/usr/local/bin/kubectl → k3s</code> (that alone satisfies p6's yellow
+      box: <code>ls -l /usr/local/bin/kubectl</code> is the proof), and
+      <code>/etc/profile.d/k3s.sh</code> points it at the kubeconfig.</li>
+    <li><strong><code>NAME smbarkis</code> — lowercase.</strong> The hostname is still
+      <code>smbarkiS</code> (<code>hostname</code> proves it); Kubernetes canonicalises node names
+      because they are DNS labels, and DNS labels forbid uppercase. Rehearsed sentence:
+      <em>"the hostname is smbarkiS as required; the node object is lowercase because node names are
+      RFC-1123 DNS labels."</em></li>
+    <li><strong><code>INTERNAL-IP 192.168.56.110</code></strong> — <code>--node-ip</code> doing exactly
+      what the eth0 lesson predicted it must. Without it, this column would read
+      <code>192.168.121.x</code> and change on every rebuild — the subject's p8 "not complete"
+      screenshot is precisely that failure.</li>
+    <li><strong><code>ROLES control-plane</code> — no <code>master</code>.</strong> The legacy
+      <code>master</code> label was removed upstream; K3s v1.36 no longer applies it. Older tutorials
+      and screenshots show <code>control-plane,master</code> — ours showing one label is
+      <em>correct</em>, not a regression.</li>
+  </ul>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <div class="t">One flag we deliberately did NOT pass — with receipts: <code>--tls-san</code></div>
+    <p>Tutorials add it "so the API cert covers the IP" — but K3s derives the cert's names from
+       <code>--node-ip</code> automatically. Proved from iot-host:</p>
+    <p><code>echo | openssl s_client -connect 192.168.56.110:6443 | openssl x509 -noout -ext subjectAltName</code><br>
+       → <code>… IP Address:192.168.56.110 …</code> — present, no <code>--tls-san</code> anywhere.</p>
+    <p style="margin-bottom:0">An unexplainable flag is a question waiting to be asked; a
+       <em>removed</em> flag with a proof is an answer waiting to be given.</p>
+  </div></div>
+
+  <h3>Next: slice 1.5 — the agent joins</h3>
+  <p>
+    <code>scripts/worker.sh</code> on smbarkiSW: same pre-seeded token,
+    <code>K3S_URL=https://192.168.56.110:6443</code>, agent mode (subject p6: <em>"In the second one
+    (ServerWorker), in agent mode"</em>), plus one guard — wait until the server's API answers before
+    installing, so a fast worker can't race a slow server. The join uses exactly the network path we
+    proved with ping in slice 1.3. Proof: <code>kubectl get nodes -o wide</code> on the server shows
+    <strong>two</strong> Ready nodes, <code>.110</code> / <code>.111</code>, roles
+    <code>control-plane</code> / <code>&lt;none&gt;</code>.
+  </p>
 </section>
 
 <hr>
