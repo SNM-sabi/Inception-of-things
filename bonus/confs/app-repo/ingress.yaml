@@ -1,9 +1,11 @@
 ---
 # This file belongs in your GITLAB PROJECT (root/iot-app), under manifests/.
 #
-# It is what makes `curl http://localhost/` work without a port-forward:
+# It is what makes `curl http://localhost:8888/` work without a port-forward —
+# p3's exact verification command, which subject p16 requires to keep working
+# ("Everything you did in Part 3 must work with your local Gitlab"):
 #
-#   host :80 -> k3d load-balancer :80 -> Traefik -> this Ingress -> Service :8888
+#   host :8888 -> k3d load-balancer :80 -> Traefik -> this Ingress -> Service :8888
 #
 # A port-forward would die the moment Argo CD replaces the pod, which is exactly
 # the v1 -> v2 moment the evaluator is watching.

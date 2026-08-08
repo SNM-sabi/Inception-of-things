@@ -34,10 +34,20 @@ fi
 # --- 1. cluster (port 80 published so the browser can reach GitLab) ---------
 if k3d cluster list -o json | grep -q "\"name\":\"${CLUSTER_NAME}\""; then
 	ok "cluster '${CLUSTER_NAME}' already exists"
-	warn "if it was NOT created with -p 80:80@loadbalancer, run ./scripts/clean.sh first"
+	warn "if it was NOT created with both -p 80:80 and -p 8888:80, run ./scripts/clean.sh first"
 else
-	log "creating k3d cluster '${CLUSTER_NAME}' with host port 80 published"
-	k3d cluster create "${CLUSTER_NAME}" -p "80:80@loadbalancer" --wait
+	# Two host ports, both onto the load-balancer's :80, because they serve two
+	# different subject requirements and k3d port maps are FIXED AT CREATE TIME:
+	#   :80   -> GitLab, which must answer on the same hostname Argo CD clones
+	#            from (external_url has no port, so it has to be 80).
+	#   :8888 -> the application, so that p3's exact verification command
+	#            `curl http://localhost:8888/` still works here. Subject p16:
+	#            "Everything you did in Part 3 must work with your local Gitlab."
+	log "creating k3d cluster '${CLUSTER_NAME}' with host ports 80 and 8888 published"
+	k3d cluster create "${CLUSTER_NAME}" \
+		-p "80:80@loadbalancer" \
+		-p "8888:80@loadbalancer" \
+		--wait
 	ok "cluster created"
 fi
 kubectl config use-context "k3d-${CLUSTER_NAME}" >/dev/null

@@ -40,7 +40,9 @@ kubectl get ingress -n dev
 
 hdr "app response (through the ingress — no port-forward)"
 # Deliberately NOT `kubectl port-forward`: it dies the moment Argo CD replaces
-# the pod, which is precisely the v1 -> v2 moment being demonstrated. This is
-# the same path the evaluator uses: host :80 -> k3d LB -> Traefik -> Ingress.
-curl -s --max-time 10 http://localhost/ || echo "no response"
+# the pod, which is precisely the v1 -> v2 moment being demonstrated. Port 8888
+# is p3's exact verification command, kept working here because subject p16 says
+# "Everything you did in Part 3 must work with your local Gitlab".
+#   host :8888 -> k3d LB :80 -> Traefik -> Ingress -> Service :8888
+curl -s --max-time 10 http://localhost:8888/ || echo "no response"
 echo
