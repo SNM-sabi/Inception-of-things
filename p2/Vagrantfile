@@ -1,0 +1,17 @@
+SERVER_IP = "192.168.56.110"
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "debian/trixie64"
+
+  config.vm.define "smbarkiS" do |server|
+    server.vm.hostname = "smbarkiS"
+    server.vm.network :private_network, ip: SERVER_IP
+    server.vm.provider :libvirt do |lv|
+      lv.default_prefix = ""      # domain is named smbarkiS (p1 and p2 are mutually exclusive)
+      lv.memory = 1024            # subject p9 allows 1024; Traefik must fit
+      lv.cpus   = 1
+    end
+    server.vm.provision "shell", path: "scripts/server.sh",
+      env: { "NODE_IP" => SERVER_IP }
+  end
+end
