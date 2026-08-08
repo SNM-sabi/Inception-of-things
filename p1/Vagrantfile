@@ -1,0 +1,6 @@
+Vagrant.configure("2") do |config|
+  config.vm.define "smbarkiS" do |server|
+    server.vm.box      = "debian/trixie64"
+    server.vm.hostname = "smbarkiS"
+  end
+end
