@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part 2 — three apps, one door — Inception-of-Things</title>
+<style>
+:root{
+  --bg:#fbfbfd; --panel:#ffffff; --ink:#1a1d23; --ink-soft:#5b6270; --ink-faint:#8b93a1;
+  --line:#e5e7ec; --line-soft:#eef0f4;
+  --accent:#4f46e5; --accent-soft:#eef0ff; --accent-ink:#3730a3;
+  --ok:#0f8a5f; --ok-soft:#e7f6ef;
+  --warn:#b45309; --warn-soft:#fdf3e3;
+  --danger:#c0392f; --danger-soft:#fdeeec;
+  --code-bg:#f4f5f8; --code-ink:#1f2430;
+  --shadow:0 1px 2px rgba(16,20,30,.04), 0 8px 24px rgba(16,20,30,.06);
+  --radius:12px;
+  --sidebar:280px;
+}
+html[data-theme="dark"]{
+  --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+  --line:#252932; --line-soft:#1d212a;
+  --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+  --ok:#4ade9c; --ok-soft:#12251d;
+  --warn:#e0a33c; --warn-soft:#2a2113;
+  --danger:#f0796c; --danger-soft:#2b1614;
+  --code-bg:#1a1e26; --code-ink:#dfe3ea;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+@media (prefers-color-scheme: dark){
+  html:not([data-theme="light"]){
+    --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+    --line:#252932; --line-soft:#1d212a;
+    --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+    --ok:#4ade9c; --ok-soft:#12251d;
+    --warn:#e0a33c; --warn-soft:#2a2113;
+    --danger:#f0796c; --danger-soft:#2b1614;
+    --code-bg:#1a1e26; --code-ink:#dfe3ea;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:24px}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+code,kbd,pre{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:100;transition:width .1s linear}
+.wrap{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;max-width:1320px;margin:0 auto}
+aside{
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 20px 40px;
+  border-right:1px solid var(--line);background:var(--bg);
+}
+aside .brand{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;margin-bottom:4px}
+aside .brand-sub{font-size:15px;font-weight:650;line-height:1.35;margin-bottom:20px}
+nav a{
+  display:flex;gap:10px;align-items:baseline;padding:7px 10px;margin:1px 0;border-radius:8px;
+  color:var(--ink-soft);text-decoration:none;font-size:14px;line-height:1.4;
+  border-left:2px solid transparent;
+}
+nav a .n{color:var(--ink-faint);font-size:12px;font-variant-numeric:tabular-nums;min-width:14px}
+nav a:hover{background:var(--line-soft);color:var(--ink)}
+nav a.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;border-left-color:var(--accent)}
+nav a.active .n{color:var(--accent-ink)}
+.sidebar-foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-faint)}
+.sidebar-foot a{color:var(--ink-soft)}
+main{padding:56px 56px 120px;min-width:0;max-width:880px}
+.eyebrow{display:inline-block;font-size:12px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent-ink);background:var(--accent-soft);padding:5px 11px;border-radius:99px;margin-bottom:18px}
+h1{font-size:clamp(30px,4.4vw,42px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em;font-weight:720}
+.lede{font-size:18px;line-height:1.65;color:var(--ink-soft);margin:0 0 10px}
+.meta{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-faint);margin-top:22px;
+  padding-top:18px;border-top:1px solid var(--line)}
+section{padding-top:52px;scroll-margin-top:20px}
+h2{font-size:25px;line-height:1.25;margin:0 0 6px;letter-spacing:-.015em;font-weight:680;display:flex;gap:12px;align-items:baseline}
+h2 .num{font-size:14px;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;
+  background:var(--accent-soft);padding:3px 9px;border-radius:7px;line-height:1.4}
+h3{font-size:17px;margin:30px 0 8px;font-weight:660;letter-spacing:-.005em}
+p{margin:12px 0}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+strong{font-weight:660}
+a{color:var(--accent-ink)}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+p code, li code, td code, th code, h3 code, dd code{
+  background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:5px;font-size:.875em;
+  border:1px solid var(--line-soft);
+}
+pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:var(--radius);
+  overflow-x:auto;font-size:13.5px;line-height:1.65;border:1px solid var(--line);margin:16px 0}
+pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
+.pre-wrap{position:relative}
+.copy{position:absolute;top:9px;right:9px;font:inherit;font-size:11.5px;font-weight:600;
+  padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);
+  cursor:pointer;opacity:0;transition:opacity .12s}
+.pre-wrap:hover .copy{opacity:1}
+.copy:hover{color:var(--ink);border-color:var(--ink-faint)}
+.copy.done{color:var(--ok);border-color:var(--ok)}
+.tbl{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{text-align:left;font-weight:650;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-faint);padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+td{padding:12px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--line-soft)}
+.call{display:grid;grid-template-columns:auto 1fr;gap:12px;margin:20px 0;padding:14px 16px;
+  border-radius:var(--radius);border:1px solid var(--line);background:var(--panel)}
+.call .ic{font-size:16px;line-height:1.5}
+.call .bd{min-width:0}
+.call .bd > :first-child{margin-top:0}
+.call .bd > :last-child{margin-bottom:0}
+.call .t{font-weight:660;font-size:14px;margin-bottom:2px}
+.call.info{background:var(--accent-soft);border-color:transparent}
+.call.info .t{color:var(--accent-ink)}
+.call.warn{background:var(--warn-soft);border-color:transparent}
+.call.warn .t{color:var(--warn)}
+.call.danger{background:var(--danger-soft);border-color:transparent}
+.call.danger .t{color:var(--danger)}
+.call.ok{background:var(--ok-soft);border-color:transparent}
+.call.ok .t{color:var(--ok)}
+.call.quote{background:var(--panel);border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0}
+.call.quote .t{color:var(--accent-ink)}
+.call.quote em{color:var(--ink)}
+.status{list-style:none;padding:0;margin:16px 0}
+.status li{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:9px 12px;margin:5px 0;
+  border-radius:9px;background:var(--panel);border:1px solid var(--line);font-size:14.5px;align-items:baseline}
+.status li .s{font-weight:700}
+.status li.done .s{color:var(--ok)}
+.status li.here{background:var(--accent-soft);border-color:transparent}
+.status li.here .s{color:var(--accent-ink)}
+.status li.todo{color:var(--ink-soft)}
+.status li.todo .s{color:var(--ink-faint)}
+details.q{border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel);overflow:hidden}
+details.q summary{cursor:pointer;padding:13px 16px;font-weight:600;font-size:15px;list-style:none;
+  display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);
+  font-size:12px;font-weight:700;display:grid;place-items:center}
+details.q summary .chev{color:var(--ink-faint);font-size:12px;transition:transform .15s}
+details.q[open] summary .chev{transform:rotate(90deg)}
+details.q .ans{padding:0 16px 15px 50px;color:var(--ink-soft);font-size:14.5px}
+details.q .ans > :first-child{margin-top:0}
+.toggle{position:fixed;top:18px;right:20px;z-index:90;display:flex;gap:6px;
+  background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:4px;box-shadow:var(--shadow)}
+.toggle button{border:0;background:none;cursor:pointer;font:inherit;font-size:14px;line-height:1;
+  padding:7px 10px;border-radius:99px;color:var(--ink-faint)}
+.toggle button.on{background:var(--accent-soft);color:var(--accent-ink)}
+.menu-btn{display:none}
+@media (max-width:1000px){
+  .wrap{grid-template-columns:1fr}
+  aside{position:fixed;inset:0 auto 0 0;width:290px;z-index:80;transform:translateX(-100%);
+    transition:transform .2s ease;box-shadow:var(--shadow);background:var(--panel)}
+  aside.open{transform:none}
+  main{padding:76px 22px 100px}
+  .menu-btn{display:grid;place-items:center;position:fixed;top:18px;left:18px;z-index:90;
+    width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);cursor:pointer;font-size:17px;box-shadow:var(--shadow)}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:79;display:none}
+  .scrim.open{display:block}
+}
+@media print{
+  aside,.toggle,.menu-btn,#progress,.copy{display:none}
+  .wrap{grid-template-columns:1fr}
+  main{padding:0;max-width:100%}
+  details.q{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
+<div class="scrim" id="scrim"></div>
+<div class="toggle" role="group" aria-label="Colour theme">
+  <button id="tLight" title="Light">☀</button>
+  <button id="tDark" title="Dark">☾</button>
+</div>
+
+<div class="wrap">
+
+<aside id="sidebar">
+  <div class="brand">Inception-of-Things</div>
+  <div class="brand-sub">Part 2 —<br>three apps, one door</div>
+  <nav id="nav">
+    <a href="#s0"><span class="n">0</span><span>Where we are</span></a>
+    <a href="#s1"><span class="n">1</span><span>What p2 is, in one picture</span></a>
+    <a href="#s2"><span class="n">2</span><span>Deployment</span></a>
+    <a href="#s3"><span class="n">3</span><span>Service</span></a>
+    <a href="#s4"><span class="n">4</span><span>Ingress</span></a>
+    <a href="#s5"><span class="n">5</span><span>How a curl reaches a pod</span></a>
+    <a href="#s6"><span class="n">6</span><span>server.sh vs p1's</span></a>
+    <a href="#s7"><span class="n">7</span><span>Test yourself</span></a>
+  </nav>
+  <div class="sidebar-foot">
+    Part of the series:<br>
+    <a href="index.html">1 · Step One from zero</a><br>
+    <a href="phase0.html">2 · Phase 0 in practice</a><br>
+    <a href="p1.html">3 · Part 1: the two machines</a><br>
+    <strong>4 · Part 2: three apps, one door</strong><br><br>
+    Source: <a href="P2.md">P2.md</a><br>
+    Plan: <a href="../PLAN.md">PLAN.md</a> · Rules: <a href="../CLAUDE.md">CLAUDE.md</a>
+  </div>
+</aside>
+
+<main>
+
+<span class="eyebrow">Part 2 · concepts before code</span>
+<h1>Three apps, one door, explained from zero</h1>
+<p class="lede">
+  Part 1 built a cluster; <strong>Part 2 makes it serve web traffic.</strong> New Kubernetes
+  concepts appear here for the first time — Deployment, Service, Ingress — so this page explains
+  each one before we use it, with the exact examples we'll run.
+</p>
+<div class="meta">
+  <span>~10 min read</span><span>·</span>
+  <span>Subject pages 9–11</span>
+</div>
+
+<!-- ============ 0 ============ -->
+<section id="s0">
+  <h2><span class="num">0</span> Where we are</h2>
+  <ul class="status">
+    <li class="here"><span class="s">⏳</span><span><strong>2.1</strong> One VM, K3s server, <strong>Traefik on</strong> — proof: curl <code>.110</code> → Traefik's 404 — <strong>building</strong></span></li>
+    <li class="todo"><span class="s">○</span><span><strong>2.2</strong> app1 alone: Deployment + Service — curl its ClusterIP from inside</span></li>
+    <li class="todo"><span class="s">○</span><span><strong>2.3</strong> First Ingress rule: <code>app1.com</code> — curl with Host header, <strong>from the host</strong></span></li>
+    <li class="todo"><span class="s">○</span><span><strong>2.4</strong> app2 with <strong>3 replicas</strong> — 9 curls hit 3 different pods</span></li>
+    <li class="todo"><span class="s">○</span><span><strong>2.5</strong> app3 as the <strong>default</strong> — no/unknown Host → app3</span></li>
+    <li class="todo"><span class="s">○</span><span><strong>2.6</strong> Everything from <code>confs/</code> + the clean-run gate</span></li>
+  </ul>
+</section>
+
+<hr>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <h2><span class="num">1</span> What p2 actually is, in one picture</h2>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p9</div>
+    <p><em>"You will set up 3 web applications… You will have to be able to access them depending on
+       the HOST used when making a request to the IP address 192.168.56.110."</em></p>
+  </div></div>
+  <div class="pre-wrap"><pre><code>                     ┌─────────────── the VM (smbarkiS, .110) ──────────────┐
+curl -H "Host: app1.com" ──┐                 │                              │
+curl -H "Host: app2.com" ──┼─► port 80 ─► Traefik ─► app1  (1 pod)          │
+curl (anything else)     ──┘      (the door)    │  └──► app2  (3 pods!)     │
+                                                │  └──► app3  (1 pod, DEFAULT)
+                                                └───────────────────────────┘</code></pre></div>
+  <p>
+    One machine, one IP, one port — and <strong>the request itself says which app it wants</strong>,
+    via the <code>Host:</code> header. That's the whole exercise: teaching one door to route to three
+    rooms.
+  </p>
+  <h3>What is this "Host header"?</h3>
+  <p>
+    When a browser fetches <code>http://app1.com/</code>, it does two separate things: (1) looks up
+    <code>app1.com</code> in DNS to get an IP, and (2) connects to that IP and sends
+    <code>Host: app1.com</code> inside the HTTP request. Step 2 is how one server can host many
+    sites — it reads the header and picks.
+  </p>
+  <div class="call info"><div class="ic">💡</div><div class="bd">
+    <div class="t">Why no /etc/hosts editing is needed</div>
+    <p><code>curl -H "Host: app1.com" http://192.168.56.110</code> skips DNS entirely (we supply the
+       IP) but still sends the header — the test never resolves <code>app1.com</code> at all.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <h2><span class="num">2</span> Concept: Deployment — "keep N copies of this running"</h2>
+  <p>
+    You don't run containers directly in Kubernetes. You write a <strong>Deployment</strong>: a
+    promise you ask the cluster to keep — <em>"there shall be N pods (running containers) built from
+    this image, forever."</em> If a pod dies, the Deployment replaces it. If you set
+    <code>replicas: 3</code>, you get three identical pods.
+  </p>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p9, blue box</div>
+    <p><em>"application number 2 has 3 replicas. Adapt your configuration to create the replicas."</em>
+       — one line of YAML is the adaptation.</p>
+  </div></div>
+  <p>
+    We use one image for all three apps: <strong><code>traefik/whoami:v1.12.0</code></strong> — a
+    5 MB web server whose whole job is answering "who am I": the first line of its response is the
+    <strong>pod's own name</strong>, and an env var <code>WHOAMI_NAME</code> stamps each app's
+    identity into the reply. Chosen precisely because it makes every proof observable:
+  </p>
+  <ul>
+    <li>three visibly different responses for the three apps (the subject demands you can tell them apart);</li>
+    <li>the killer proof for replicas: 9 curls to app2, <code>head -1</code> of each →
+      <strong>three different pod names appearing</strong> = load-balancing demonstrated, not claimed.</li>
+  </ul>
+</section>
+
+<hr>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <h2><span class="num">3</span> Concept: Service — a stable address in front of moving pods</h2>
+  <p>
+    Pods die and are replaced, and every new pod gets a new IP. A <strong>Service</strong> is the
+    fix: a permanent virtual IP (a "ClusterIP") with a name, which forwards to whatever pods
+    currently match its selector — and if several match (app2's three), it
+    <strong>load-balances</strong> between them. That's the mechanism the replica proof exercises.
+  </p>
+  <p>
+    p11's screenshot pins down our shape: services named after the apps, <strong>ClusterIP</strong>,
+    port <strong>80</strong>, in the <strong><code>default</code> namespace</strong> — the
+    screenshot's <code>kubectl get all</code> has no <code>-n</code> flag, so that's where the
+    evaluator will look, so that's where the apps live.
+  </p>
+</section>
+
+<hr>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <h2><span class="num">4</span> Concept: Ingress — the routing table for the one door</h2>
+  <p>
+    Services give each app a <em>cluster-internal</em> address. The <strong>Ingress</strong> maps
+    <em>outside</em> traffic onto them: "Host <code>app1.com</code> → service app1; Host
+    <code>app2.com</code> → service app2; anything else → app3." Someone has to <em>implement</em>
+    that table — an <strong>ingress controller</strong>. Ours is <strong>Traefik, already inside
+    K3s</strong> (that's why p2's <code>server.sh</code> keeps it enabled). We write one standard
+    <code>networking.k8s.io/v1</code> Ingress object; Traefik watches and obeys.
+  </p>
+  <p>Two decisions here are the difference between "works" and "works for the right reason":</p>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <div class="t">app3 is <code>spec.defaultBackend</code>, not a host-less rule</div>
+    <p>Both <em>look</em> right in a demo. But a rule with no host becomes an ordinary
+       lowest-priority route by <em>accident</em> of Traefik's rule-sorting (longer rule strings
+       win), while <code>defaultBackend</code> compiles to a priority that <strong>cannot</strong> be
+       outranked — it is the mechanism whose <em>meaning</em> is "when nothing else matches". The
+       subject's word is <em>"Otherwise, app3 will be selected by default"</em> — we use the
+       construct that says exactly that.</p>
+  </div></div>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">One single Ingress object</div>
+    <p>Traefik treats the default backend as a global singleton — a second Ingress declaring one is
+       silently dropped. And practically: p11's red box says <em>"The Ingress is not displayed here
+       on purpose. You will have to show it to your evaluators"</em> — one object means
+       <code>kubectl describe ingress</code> puts the whole routing story on one screen while you
+       narrate it.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <h2><span class="num">5</span> How a curl actually reaches a pod — the full chain</h2>
+  <p>Worth reciting once, because "how does the request get in?" is a guaranteed question:</p>
+  <div class="pre-wrap"><pre><code>curl on iot-host (.56.1)
+ → VM eth1 192.168.56.110, port 80        ← who's listening? ServiceLB
+ → svclb pod (hostPort 80)                ← K3s's built-in LoadBalancer
+ → Traefik pod                            ← reads Host header, consults Ingress
+ → Service of the matching app            ← stable address, load-balances
+ → one of the app's pods                  ← whoami answers, names itself</code></pre></div>
+  <p>
+    Nothing was installed to make port 80 work: Traefik's Service is type
+    <code>LoadBalancer</code>, and K3s ships <strong>ServiceLB</strong>, which grabs hostPort 80/443
+    on the node for it. (Corollary worth knowing: nothing else on the VM may claim port 80.) This is
+    also why the p1 crisis fix disabled ServiceLB <em>there</em> — p1 had nothing to serve — and
+    re-enables it <em>here</em>, where it is the doorway.
+  </p>
+</section>
+
+<hr>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <h2><span class="num">6</span> p2's server.sh vs p1's — every difference is a sentence</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Difference</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><strong>No <code>K3S_TOKEN</code></strong></td>
+          <td>No worker exists. A join token would serve nothing — and every unexplainable line is a
+              question waiting to be asked.</td></tr>
+      <tr><td><strong>Traefik + ServiceLB enabled</strong></td>
+          <td>p2 is about routing; these two <em>are</em> the routing.</td></tr>
+      <tr><td><strong>metrics-server + local-storage still disabled</strong></td>
+          <td>p2 uses neither; p1 taught us the full bundle doesn't fit 1024 MB on v1.36.</td></tr>
+      <tr><td><strong>Success = Traefik answers on :80</strong></td>
+          <td>"Node Ready" isn't the finish line here; the router serving is. The provisioner waits
+              for it.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="call info"><div class="ic">🔮</div><div class="bd">
+    <div class="t">The prediction the build tests</div>
+    <p>Before any app exists, <code>curl http://192.168.56.110</code> returns Traefik's
+       <strong>404 page not found</strong>. A 404 sounds like failure — here it's the router saying
+       "I'm alive; I just have nowhere to send you." Connection refused/timeout would mean 2.1
+       failed; <strong>404 means it passed</strong>.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 7 ============ -->
+<section id="s7">
+  <h2><span class="num">7</span> Test yourself</h2>
+
+  <details class="q"><summary><span class="qn">1</span><span>Why is editing <code>/etc/hosts</code> unnecessary for the p2 tests?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>The tests give curl the IP directly and set the <code>Host:</code> header by hand —
+      no name resolution ever happens. → <a href="#s1">§1</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">2</span><span>What single YAML line satisfies the subject's blue box about app2?</span><span class="chev">›</span></summary>
+    <div class="ans"><p><code>replicas: 3</code> in app2's Deployment. → <a href="#s2">§2</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">3</span><span>Why can't the Ingress route straight to pods, skipping Services?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>Pod IPs change on every restart; the Service is the stable address and the
+      load-balancer across app2's three replicas. The Ingress routes to Services by design.
+      → <a href="#s3">§3</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">4</span><span>Why <code>spec.defaultBackend</code> for app3 and not a rule without a host?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>A host-less rule only loses to the others by accident of rule-string length;
+      <code>defaultBackend</code> compiles to a priority that cannot be outranked and <em>means</em>
+      "when nothing else matches" — which is the subject's own word: "by default".
+      → <a href="#s4">§4</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">5</span><span>Who is listening on the VM's port 80, and who put it there?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>K3s's ServiceLB took hostPort 80/443 for Traefik's LoadBalancer Service —
+      automatically, the moment Traefik deployed. Nothing else may claim those ports.
+      → <a href="#s5">§5</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">6</span><span>Before any app exists, curl returns 404. Good or bad?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>Good — it's Traefik answering with "nowhere to send you yet". Refused/timeout
+      would be the bad outcomes. → <a href="#s6">§6</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">7</span><span>Why does p2's script have no token when p1's did?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>Tokens exist so an agent can join a server. p2 has no second machine — the line
+      would serve nothing, and unexplainable lines get deleted. → <a href="#s6">§6</a></p></div></details>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement, L=document.getElementById('tLight'), D=document.getElementById('tDark');
+  function paint(t){
+    root.setAttribute('data-theme',t);
+    try{localStorage.setItem('iot-theme',t)}catch(e){}
+    L.classList.toggle('on',t==='light'); D.classList.toggle('on',t==='dark');
+  }
+  var saved=null; try{saved=localStorage.getItem('iot-theme')}catch(e){}
+  paint(saved || (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+  L.onclick=function(){paint('light')}; D.onclick=function(){paint('dark')};
+  var bar=document.getElementById('progress');
+  function prog(){
+    var h=document.documentElement.scrollHeight-window.innerHeight;
+    bar.style.width=(h>0?(window.scrollY/h*100):0)+'%';
+  }
+  window.addEventListener('scroll',prog,{passive:true}); prog();
+  var links=[].slice.call(document.querySelectorAll('#nav a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))}).filter(Boolean);
+  function spy(){
+    var best=null, bestTop=-1e9;
+    secs.forEach(function(s){
+      var t=s.getBoundingClientRect().top-90;
+      if(t<=0 && t>bestTop){bestTop=t;best=s}
+    });
+    if(!best) best=secs[0];
+    links.forEach(function(a){a.classList.toggle('active', a.getAttribute('href')==='#'+best.id)});
+  }
+  window.addEventListener('scroll',spy,{passive:true}); spy();
+  [].forEach.call(document.querySelectorAll('.pre-wrap'),function(w){
+    var b=document.createElement('button'); b.className='copy'; b.textContent='copy';
+    b.onclick=function(){
+      var txt=w.querySelector('code').innerText;
+      navigator.clipboard.writeText(txt).then(function(){
+        b.textContent='copied'; b.classList.add('done');
+        setTimeout(function(){b.textContent='copy'; b.classList.remove('done')},1400);
+      });
+    };
+    w.appendChild(b);
+  });
+  var sb=document.getElementById('sidebar'), sc=document.getElementById('scrim'), mb=document.getElementById('menuBtn');
+  function close(){sb.classList.remove('open'); sc.classList.remove('open')}
+  mb.onclick=function(){sb.classList.toggle('open'); sc.classList.toggle('open')};
+  sc.onclick=close;
+  links.forEach(function(a){a.addEventListener('click',close)});
+})();
+</script>
+</body>
+</html>
