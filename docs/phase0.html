@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 0 — building the outer VM — Inception-of-Things</title>
+<style>
+:root{
+  --bg:#fbfbfd; --panel:#ffffff; --ink:#1a1d23; --ink-soft:#5b6270; --ink-faint:#8b93a1;
+  --line:#e5e7ec; --line-soft:#eef0f4;
+  --accent:#4f46e5; --accent-soft:#eef0ff; --accent-ink:#3730a3;
+  --ok:#0f8a5f; --ok-soft:#e7f6ef;
+  --warn:#b45309; --warn-soft:#fdf3e3;
+  --danger:#c0392f; --danger-soft:#fdeeec;
+  --code-bg:#f4f5f8; --code-ink:#1f2430;
+  --shadow:0 1px 2px rgba(16,20,30,.04), 0 8px 24px rgba(16,20,30,.06);
+  --radius:12px;
+  --sidebar:280px;
+}
+html[data-theme="dark"]{
+  --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+  --line:#252932; --line-soft:#1d212a;
+  --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+  --ok:#4ade9c; --ok-soft:#12251d;
+  --warn:#e0a33c; --warn-soft:#2a2113;
+  --danger:#f0796c; --danger-soft:#2b1614;
+  --code-bg:#1a1e26; --code-ink:#dfe3ea;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+@media (prefers-color-scheme: dark){
+  html:not([data-theme="light"]){
+    --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+    --line:#252932; --line-soft:#1d212a;
+    --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+    --ok:#4ade9c; --ok-soft:#12251d;
+    --warn:#e0a33c; --warn-soft:#2a2113;
+    --danger:#f0796c; --danger-soft:#2b1614;
+    --code-bg:#1a1e26; --code-ink:#dfe3ea;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:24px}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+code,kbd,pre{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:100;transition:width .1s linear}
+.wrap{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;max-width:1320px;margin:0 auto}
+aside{
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 20px 40px;
+  border-right:1px solid var(--line);background:var(--bg);
+}
+aside .brand{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;margin-bottom:4px}
+aside .brand-sub{font-size:15px;font-weight:650;line-height:1.35;margin-bottom:20px}
+nav a{
+  display:flex;gap:10px;align-items:baseline;padding:7px 10px;margin:1px 0;border-radius:8px;
+  color:var(--ink-soft);text-decoration:none;font-size:14px;line-height:1.4;
+  border-left:2px solid transparent;
+}
+nav a .n{color:var(--ink-faint);font-size:12px;font-variant-numeric:tabular-nums;min-width:14px}
+nav a:hover{background:var(--line-soft);color:var(--ink)}
+nav a.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;border-left-color:var(--accent)}
+nav a.active .n{color:var(--accent-ink)}
+.sidebar-foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-faint)}
+.sidebar-foot a{color:var(--ink-soft)}
+main{padding:56px 56px 120px;min-width:0;max-width:880px}
+.eyebrow{display:inline-block;font-size:12px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent-ink);background:var(--accent-soft);padding:5px 11px;border-radius:99px;margin-bottom:18px}
+h1{font-size:clamp(30px,4.4vw,42px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em;font-weight:720}
+.lede{font-size:18px;line-height:1.65;color:var(--ink-soft);margin:0 0 10px}
+.meta{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-faint);margin-top:22px;
+  padding-top:18px;border-top:1px solid var(--line)}
+section{padding-top:52px;scroll-margin-top:20px}
+h2{font-size:25px;line-height:1.25;margin:0 0 6px;letter-spacing:-.015em;font-weight:680;display:flex;gap:12px;align-items:baseline}
+h2 .num{font-size:14px;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;
+  background:var(--accent-soft);padding:3px 9px;border-radius:7px;line-height:1.4}
+h3{font-size:17px;margin:30px 0 8px;font-weight:660;letter-spacing:-.005em}
+p{margin:12px 0}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+strong{font-weight:660}
+a{color:var(--accent-ink)}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+p code, li code, td code, th code, h3 code, dd code{
+  background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:5px;font-size:.875em;
+  border:1px solid var(--line-soft);
+}
+pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:var(--radius);
+  overflow-x:auto;font-size:13.5px;line-height:1.65;border:1px solid var(--line);margin:16px 0}
+pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
+.pre-wrap{position:relative}
+.copy{position:absolute;top:9px;right:9px;font:inherit;font-size:11.5px;font-weight:600;
+  padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);
+  cursor:pointer;opacity:0;transition:opacity .12s}
+.pre-wrap:hover .copy{opacity:1}
+.copy:hover{color:var(--ink);border-color:var(--ink-faint)}
+.copy.done{color:var(--ok);border-color:var(--ok)}
+.tbl{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{text-align:left;font-weight:650;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-faint);padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+td{padding:12px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--line-soft)}
+.call{display:grid;grid-template-columns:auto 1fr;gap:12px;margin:20px 0;padding:14px 16px;
+  border-radius:var(--radius);border:1px solid var(--line);background:var(--panel)}
+.call .ic{font-size:16px;line-height:1.5}
+.call .bd{min-width:0}
+.call .bd > :first-child{margin-top:0}
+.call .bd > :last-child{margin-bottom:0}
+.call .t{font-weight:660;font-size:14px;margin-bottom:2px}
+.call.info{background:var(--accent-soft);border-color:transparent}
+.call.info .t{color:var(--accent-ink)}
+.call.warn{background:var(--warn-soft);border-color:transparent}
+.call.warn .t{color:var(--warn)}
+.call.danger{background:var(--danger-soft);border-color:transparent}
+.call.danger .t{color:var(--danger)}
+.call.ok{background:var(--ok-soft);border-color:transparent}
+.call.ok .t{color:var(--ok)}
+.call.quote{background:var(--panel);border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0}
+.call.quote .t{color:var(--accent-ink)}
+.call.quote em{color:var(--ink)}
+.diagram{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;margin:20px 0;box-shadow:var(--shadow)}
+.layer{border:1px solid var(--line);border-radius:10px;padding:13px 16px;margin:0}
+.layer .lname{font-weight:650;font-size:14.5px}
+.layer .lnote{font-size:12.5px;color:var(--ink-faint);margin-top:2px}
+.l0{background:var(--line-soft)}
+.l1{background:var(--accent-soft);border-color:transparent;margin-top:12px}
+.l2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.l2 > div{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 14px}
+.tagline{display:inline-block;font-size:11px;font-weight:650;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-faint);border:1px solid var(--line);border-radius:99px;padding:2px 8px;margin-left:8px;vertical-align:middle}
+.check{list-style:none;padding:0;margin:16px 0;counter-reset:c}
+.check li{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;
+  padding:12px 14px;border:1px solid var(--line);border-radius:10px;margin:8px 0;background:var(--panel)}
+.check li::before{counter-increment:c;content:counter(c);
+  width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);
+  font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:2px}
+.check li > div > :first-child{margin-top:0}
+.check li > div > :last-child{margin-bottom:0}
+.gloss{display:grid;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+  background:var(--panel);margin:18px 0;box-shadow:var(--shadow)}
+.gloss > div{display:grid;grid-template-columns:230px 1fr;gap:16px;padding:11px 16px;border-bottom:1px solid var(--line-soft);font-size:14.5px}
+.gloss > div:last-child{border-bottom:0}
+.gloss dt{font-weight:650;margin:0}
+.gloss dd{margin:0;color:var(--ink-soft)}
+details.q{border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel);overflow:hidden}
+details.q summary{cursor:pointer;padding:13px 16px;font-weight:600;font-size:15px;list-style:none;
+  display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);
+  font-size:12px;font-weight:700;display:grid;place-items:center}
+details.q summary .chev{color:var(--ink-faint);font-size:12px;transition:transform .15s}
+details.q[open] summary .chev{transform:rotate(90deg)}
+details.q .ans{padding:0 16px 15px 50px;color:var(--ink-soft);font-size:14.5px}
+details.q .ans > :first-child{margin-top:0}
+.status{list-style:none;padding:0;margin:16px 0}
+.status li{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:9px 12px;margin:5px 0;
+  border-radius:9px;background:var(--panel);border:1px solid var(--line);font-size:14.5px;align-items:baseline}
+.status li .s{font-weight:700}
+.status li.done .s{color:var(--ok)}
+.status li.here{background:var(--accent-soft);border-color:transparent}
+.status li.here .s{color:var(--accent-ink)}
+.status li.todo{color:var(--ink-soft)}
+.status li.todo .s{color:var(--ink-faint)}
+.toggle{position:fixed;top:18px;right:20px;z-index:90;display:flex;gap:6px;
+  background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:4px;box-shadow:var(--shadow)}
+.toggle button{border:0;background:none;cursor:pointer;font:inherit;font-size:14px;line-height:1;
+  padding:7px 10px;border-radius:99px;color:var(--ink-faint)}
+.toggle button.on{background:var(--accent-soft);color:var(--accent-ink)}
+.menu-btn{display:none}
+@media (max-width:1000px){
+  .wrap{grid-template-columns:1fr}
+  aside{position:fixed;inset:0 auto 0 0;width:290px;z-index:80;transform:translateX(-100%);
+    transition:transform .2s ease;box-shadow:var(--shadow);background:var(--panel)}
+  aside.open{transform:none}
+  main{padding:76px 22px 100px}
+  .menu-btn{display:grid;place-items:center;position:fixed;top:18px;left:18px;z-index:90;
+    width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);cursor:pointer;font-size:17px;box-shadow:var(--shadow)}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:79;display:none}
+  .scrim.open{display:block}
+  .l2{grid-template-columns:1fr}
+  .gloss > div{grid-template-columns:1fr;gap:2px}
+}
+@media print{
+  aside,.toggle,.menu-btn,#progress,.copy{display:none}
+  .wrap{grid-template-columns:1fr}
+  main{padding:0;max-width:100%}
+  details.q{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
+<div class="scrim" id="scrim"></div>
+<div class="toggle" role="group" aria-label="Colour theme">
+  <button id="tLight" title="Light">☀</button>
+  <button id="tDark" title="Dark">☾</button>
+</div>
+
+<div class="wrap">
+
+<aside id="sidebar">
+  <div class="brand">Inception-of-Things</div>
+  <div class="brand-sub">Phase 0 —<br>building the outer VM</div>
+  <nav id="nav">
+    <a href="#s0"><span class="n">0</span><span>Where we are</span></a>
+    <a href="#s1"><span class="n">1</span><span>What we installed</span></a>
+    <a href="#s2"><span class="n">2</span><span>libvirt's two worlds</span></a>
+    <a href="#s3"><span class="n">3</span><span>Cloud images</span></a>
+    <a href="#s4"><span class="n">4</span><span>cloud-init &amp; the seed</span></a>
+    <a href="#s5"><span class="n">5</span><span>The command, flag by flag</span></a>
+    <a href="#s6"><span class="n">6</span><span>Three network layers</span></a>
+    <a href="#s7"><span class="n">7</span><span>What research fixed</span></a>
+    <a href="#s8"><span class="n">8</span><span>The gate</span></a>
+    <a href="#s9"><span class="n">9</span><span>What could go wrong</span></a>
+    <a href="#s10"><span class="n">10</span><span>Glossary</span></a>
+    <a href="#s11"><span class="n">11</span><span>Test yourself</span></a>
+  </nav>
+  <div class="sidebar-foot">
+    Part of the series:<br>
+    <a href="index.html">← Step One, explained from zero</a><br><br>
+    Source: <a href="PHASE0.md">PHASE0.md</a><br>
+    Plan: <a href="../PLAN.md">PLAN.md</a> · Rules: <a href="../CLAUDE.md">CLAUDE.md</a>
+  </div>
+</aside>
+
+<main>
+
+<span class="eyebrow">Phase 0 · in practice</span>
+<h1>Building the outer VM, explained from zero</h1>
+<p class="lede">
+  <a href="index.html">Step One</a> explained the <em>concepts</em> before we touched anything.
+  This page explains <strong>Phase 0 as we are actually doing it</strong> — every command, every
+  file, every flag, and the three traps the research caught before they caught us.
+</p>
+<div class="meta">
+  <span>~12 min read</span><span>·</span>
+  <span>Companion to iot-host-setup.sh and iot-create-vm.sh</span>
+</div>
+
+<!-- ============ 0 ============ -->
+<section id="s0">
+  <h2><span class="num">0</span> Where we are</h2>
+  <ul class="status">
+    <li class="done"><span class="s">✅</span><span><strong>0.1</strong> Install the hypervisor toolchain on the laptop — done, verified</span></li>
+    <li class="done"><span class="s">✅</span><span>Download + verify the Debian 13 cloud image — SHA512 matches Debian's published sum</span></li>
+    <li class="done"><span class="s">✅</span><span>Build the cloud-init seed ISO — label <code>cidata</code> verified</span></li>
+    <li class="here"><span class="s">⬅</span><span><strong>0.2</strong> Create the outer VM — <code>sudo bash ~/iot-create-vm.sh</code> — <strong>you are here</strong></span></li>
+    <li class="todo"><span class="s">○</span><span><strong>0.3</strong> Gate: <code>/dev/kvm</code> exists <em>inside</em> the VM</span></li>
+    <li class="todo"><span class="s">○</span><span><strong>0.4</strong> Install Vagrant + Docker inside the VM, then p1 slice 1.1</span></li>
+  </ul>
+</section>
+
+<hr>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <h2><span class="num">1</span> What we installed on the laptop, and what each piece is</h2>
+  <p>One <code>apt</code> command installed six things. Each has exactly one job:</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Package</th><th>Job, in one sentence</th></tr></thead>
+    <tbody>
+      <tr><td><code>qemu-system-x86</code></td><td>The <strong>emulator</strong> — invents the fake CPU, disk, network card the guest will see.</td></tr>
+      <tr><td><code>libvirt-daemon-system</code></td><td>The <strong>manager</strong> — a background service (<code>libvirtd</code>) that creates, starts, stops and tracks VMs.</td></tr>
+      <tr><td><code>libvirt-clients</code></td><td>The <strong>remote control</strong> — gives us <code>virsh</code>, the command line for talking to the manager.</td></tr>
+      <tr><td><code>virtinst</code></td><td>The <strong>builder</strong> — gives us <code>virt-install</code>, which creates a VM from one command instead of a GUI wizard.</td></tr>
+      <tr><td><code>virt-manager</code></td><td>The <strong>window</strong> — a GUI where you can watch the VM's screen. Comfort, not necessity.</td></tr>
+      <tr><td><code>cloud-image-utils</code></td><td>The <strong>seeder</strong> — gives us <code>cloud-localds</code>, which packs our first-boot config into a tiny ISO.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="call info"><div class="ic">💡</div><div class="bd">
+    <div class="t">Analogy</div>
+    <p>QEMU is the stage, libvirt is the stage manager, <code>virsh</code> is the walkie-talkie you use to give
+       the stage manager orders, and <code>virt-install</code> is the crew that builds the set.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <h2><span class="num">2</span> The mystery of the empty list — libvirt is TWO services</h2>
+  <p>
+    Right after installing, we ran <code>virsh net-list --all</code> and got… nothing. Not an empty
+    network — <em>no networks at all</em>. That looked broken. It wasn't, and the reason will bite
+    again later, so learn it now:
+  </p>
+  <p><strong>libvirt runs two separate worlds on the same machine.</strong></p>
+  <div class="tbl"><table>
+    <thead><tr><th>World</th><th>URI</th><th>Who owns it</th><th>Has the NAT network?</th></tr></thead>
+    <tbody>
+      <tr><td><strong>System</strong></td><td><code>qemu:///system</code></td><td>root / <code>libvirt</code>-group members</td>
+          <td><strong>yes</strong> — <code>default</code>, 192.168.122.0/24</td></tr>
+      <tr><td><strong>Session</strong></td><td><code>qemu:///session</code></td><td>just you, unprivileged</td><td>no</td></tr>
+    </tbody>
+  </table></div>
+  <p>
+    <code>virsh</code> silently picks a world based on who you are. Our shell wasn't in the
+    <code>libvirt</code> group yet (group membership is only read at login), so <code>virsh</code>
+    quietly fell back to the <em>session</em> world and truthfully reported that <strong>it</strong>
+    had no networks. The system world had the <code>default</code> network active and on autostart
+    the whole time.
+  </p>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">Why you must remember this</div>
+    <p><code>vagrant-libvirt</code> — which we'll use inside the outer VM for p1 — talks to
+       <code>qemu:///system</code>. If <code>vagrant up</code> ever says it cannot connect to libvirt,
+       the answer is almost always: <em>this shell hasn't picked up the libvirt group yet; log out
+       and back in.</em></p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <h2><span class="num">3</span> Installing an OS with no installer — cloud images</h2>
+  <p>
+    The classic way to make a VM is to boot the Debian installer ISO and answer questions for twenty
+    minutes. We are not doing that. Debian publishes <strong>cloud images</strong>: disks where the
+    installation has <em>already happened</em>. You copy the disk, boot it, and Debian is just…
+    running, in seconds.
+  </p>
+  <p>
+    One problem: if the install already happened, nobody ever typed a username, a password, or a
+    hostname. The image is generic on purpose. Something must personalise it on first boot — that
+    something is <strong>cloud-init</strong> (§4).
+  </p>
+
+  <h3>3.1 Debian publishes three variants — the choice matters</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Variant</th><th>Size</th><th>What it is</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><code>generic</code></td><td>414 MB</td><td>Drivers for real hardware and every cloud</td><td>works, but dead weight</td></tr>
+      <tr><td><code>genericcloud</code></td><td>326 MB</td><td><strong>Only virtio drivers — built for exactly our case: a KVM guest</strong></td><td>✅ ours</td></tr>
+      <tr><td><code>nocloud</code></td><td>389 MB</td><td><strong>No cloud-init at all.</strong> Root login, no password, no SSH server</td><td>☠ trap</td></tr>
+    </tbody>
+  </table></div>
+  <div class="call danger"><div class="ic">⛔</div><div class="bd">
+    <div class="t"><code>nocloud</code> sounds like "no cloud, so for local VMs" — it is the opposite</div>
+    <p>The name means "no cloud-<em>init</em>". It would silently ignore our seed ISO, and we'd boot a
+       VM with no user and no way in over SSH.</p>
+  </div></div>
+  <p>
+    Research confirmed one more detail worth knowing: Debian's <em>cloud kernel</em> (used in
+    <code>genericcloud</code>) deliberately keeps the SATA CD-ROM driver <strong>because</strong>
+    config-drive ISOs are how clouds hand configuration to VMs — so our seed CD is a first-class
+    citizen, not a hack.
+  </p>
+
+  <h3>3.2 We verified the download — what that does and doesn't prove</h3>
+  <div class="pre-wrap"><pre><code>ours:     769562604ecaac26...
+Debian's: 769562604ecaac26...   → MATCH</code></pre></div>
+  <p>
+    We computed the SHA512 of our downloaded file and compared it to the sum Debian publishes on
+    <code>cloud.debian.org</code> over HTTPS. A match proves the file arrived <strong>complete and
+    uncorrupted, and is the exact build Debian published</strong> (<code>20260803-2559</code>,
+    Debian 13.6). Honest caveat: Debian does not GPG-sign these particular checksum files, so the
+    trust anchor is the HTTPS connection to <code>cloud.debian.org</code> — good enough for this
+    project, and worth being able to say precisely.
+  </p>
+</section>
+
+<hr>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <h2><span class="num">4</span> cloud-init — the robot that personalises the machine</h2>
+  <p>
+    <strong>cloud-init</strong> is a small program inside the image that wakes up on every boot and
+    asks: <em>"does anyone have configuration for me?"</em> On first boot, it does everything an
+    installer would have asked interactively. We answer it with two tiny files:
+  </p>
+  <ul>
+    <li><strong><code>meta-data</code></strong> — identity: an instance-id and the hostname (<code>iot-host</code>).</li>
+    <li><strong><code>user-data</code></strong> — the wishlist. Ours says, in plain terms:
+      <ul>
+        <li>create user <code>sabdark</code>, in <code>sudo</code>, no password needed for sudo;</li>
+        <li>install this SSH public key (a fresh keypair made just for this VM: <code>~/.ssh/iot_host_ed25519</code>);</li>
+        <li>also set a console password (<code>iot42</code>) — <em>fallback only</em>, usable at the
+            virt-manager console; the VM sits on a private NAT network, unreachable from outside the laptop;</li>
+        <li>grow the root filesystem to fill the whole disk (§5 — the disk starts at 3 GiB);</li>
+        <li>install <code>qemu-guest-agent</code> so libvirt can ask the VM for its IP address;</li>
+        <li>run <code>apt update</code> once.</li>
+      </ul></li>
+  </ul>
+  <p>
+    Those two files get packed into a 366 KB ISO — the <strong>seed</strong> — with
+    <code>cloud-localds</code>. Think of it as burning your answers to the installer's questions
+    onto a CD and leaving it in the drive.
+  </p>
+
+  <h3>4.1 How does cloud-init FIND the seed? Twice, on purpose.</h3>
+  <ol class="check">
+    <li><div><strong>Volume label.</strong> The seed ISO's filesystem is labeled <code>cidata</code>.
+      cloud-init scans every disk for that label. We verified ours: <code>blkid</code> reports
+      <code>LABEL=cidata</code>.</div></li>
+    <li><div><strong>SMBIOS serial.</strong> We also stamp <code>ds=nocloud</code> into the VM's
+      virtual BIOS (<code>--sysinfo smbios,system.serial=ds=nocloud</code>). A second, independent hint.</div></li>
+  </ol>
+  <p>
+    Either alone is sufficient. We ship both — belt and braces — because a VM that boots with no
+    datasource is a VM with <strong>no user and no key</strong>, and the only fix is deleting it.
+  </p>
+
+  <h3>4.2 The trap we dodged: <code>virt-install --cloud-init</code></h3>
+  <p>
+    virt-install has a built-in convenience flag that takes your <code>user-data</code> and does
+    "all of this for you". Most tutorials use it. <strong>We must not</strong>, and this is the
+    single most important finding of the research run:
+  </p>
+  <div class="call danger"><div class="ic">⛔</div><div class="bd">
+    <div class="t">The seed only exists in the VM's transient definition</div>
+    <p><code>--cloud-init</code> attaches the seed and the SMBIOS hint <strong>only to the transient
+       boot configuration</strong> — the copy of the VM definition that lives while it runs
+       <em>this once</em>. The <strong>persistent</strong> definition saved to disk gets
+       <strong>neither</strong>. And the ISO it generated is deleted before
+       <code>virt-install</code> even returns.</p>
+    <p>Consequence: first boot works. Any reboot or crash <strong>before cloud-init finishes</strong>
+       and the seed is gone forever — the VM comes back generic: no user, no key, no password.
+       Unrecoverable; rebuild from scratch. During a live demo, that is a disaster with no error
+       message.</p>
+  </div></div>
+  <p>
+    Our script builds the seed itself and attaches it <strong>permanently</strong> as a SATA CD-ROM
+    in the saved definition. Re-seeding later is even possible
+    (<code>cloud-init clean &amp;&amp; reboot</code>). Cost: one 366 KB file stays attached.
+    Benefit: the failure mode ceases to exist.
+  </p>
+</section>
+
+<hr>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <h2><span class="num">5</span> The creation command, flag by flag</h2>
+  <p>
+    This is the heart of <code>~/iot-create-vm.sh</code>. Every flag was dry-run against the real
+    libvirt before being committed to the script — the generated XML was inspected, not assumed.
+  </p>
+  <div class="pre-wrap"><pre><code>virt-install \
+  --connect qemu:///system \                  # the system world (§2) — has the NAT network
+  --name iot-host \
+  --memory 6144 \                             # ← was 8192; see 5.1
+  --vcpus 6 \                                 # of 16 host threads
+  --cpu host-passthrough \                    # give the guest the REAL CPU incl. VT-x → nested KVM
+  --disk path=…/iot-host.qcow2,format=qcow2,bus=virtio \
+  --disk path=…/iot-host-seed.iso,device=cdrom,bus=sata,readonly=on \  # the seed, permanent (§4.2)
+  --import \                                  # boot the existing disk; no installer exists
+  --osinfo debian13 \                         # guarded: falls back to debian12 if unknown (§5.2)
+  --sysinfo smbios,system.serial=ds=nocloud \ # datasource hint #2 (§4.1)
+  --network network=default,model=virtio \    # NAT: outer VM reaches the internet via the laptop
+  --graphics vnc,listen=127.0.0.1 \           # virt-manager can show its screen, localhost-only
+  --console pty,target_type=serial \          # `virsh console iot-host` works as a text fallback
+  --noautoconsole                             # return to the shell; don't attach</code></pre></div>
+
+  <h3>5.1 The sizing decisions, and why they changed</h3>
+  <ul>
+    <li><strong>RAM 6144 MB, not 8192.</strong> The laptop has 15 GiB; the desktop eats ~6. Giving
+      the VM 8 GiB leaves ~1 GiB of headroom, and the moment the laptop starts swapping, the
+      <em>nested</em> VMs inside become unusably slow — precisely during a demo. 6 GiB is ample for
+      p1 (two inner VMs: 1024 + 512 MB) and p3. It can be raised later with the VM powered off.</li>
+    <li><strong>Disk 60 GiB, not 80.</strong> The qcow2 file is <em>sparse</em> — it only occupies
+      what is actually written; 60 GiB is a ceiling, not an allocation. But the ceiling matters: if
+      the VM ever filled it, it fills the <strong>laptop's</strong> root filesystem (115 GiB free).
+      60 caps the worst case at about half of that. The image ships as a 3 GiB disk;
+      <code>qemu-img resize</code> raises the ceiling, and cloud-init's <code>growpart</code>
+      stretches the filesystem to fill it on first boot.</li>
+    <li><strong>6 vCPUs</strong> — p1 needs little, but p3's k3d cluster and the GitLab bonus are
+      CPU-hungry, and vCPUs (unlike RAM) cost nothing when idle.</li>
+  </ul>
+
+  <h3>5.2 <code>--osinfo</code> — mandatory, and guarded</h3>
+  <p>
+    <code>virt-install</code> <strong>refuses to run</strong> without <code>--osinfo</code> when
+    importing, and it <strong>aborts</strong> on a name its database doesn't know. Our laptop's
+    database (June 2025) knows <code>debian13</code> — we proved it by dry-run, and by feeding it a
+    fake <code>debian99</code> to see the failure mode. But Ubuntu's <em>release</em> pocket ships
+    a 2023 database that has never heard of Debian 13, so the script checks at runtime and falls
+    back to <code>debian12</code>. The flag only picks sensible virtual-hardware defaults; a
+    one-version-old profile is harmless, an aborted command is not.
+  </p>
+
+  <h3>5.3 Why the disk lives in <code>/var/lib/libvirt/images</code>, not <code>~/VMs</code></h3>
+  <p>
+    QEMU does not run as root — libvirt drops it to a dedicated user, <code>libvirt-qemu</code>.
+    Your home directory is mode <code>750</code>: that user cannot even <em>traverse</em> into it.
+    Additionally, AppArmor's libvirt profile explicitly denies QEMU access to <code>@{HOME}</code>.
+    A disk left in <code>~/VMs</code> produces a VM that fails to open its own disk with a cryptic
+    permission error. So the script <em>copies</em> the image into libvirt's own directory and hands
+    ownership to <code>libvirt-qemu:kvm</code>. (This is also why the script needs <code>sudo</code>,
+    and why the downloads in <code>~/VMs</code> remain untouched originals we can rebuild from.)
+  </p>
+</section>
+
+<hr>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <h2><span class="num">6</span> The three network layers — read this twice</h2>
+  <p>
+    After Phase 0 there will be <strong>three</strong> nested network worlds. Knowing which command
+    runs in which world is half of this project's debugging:
+  </p>
+  <div class="diagram">
+    <div class="layer l0">
+      <div class="lname">Laptop — machine A <span class="tagline">WiFi 10.32.x.x → internet</span></div>
+      <div class="lnote">reaches the outer VM over libvirt's NAT: 192.168.122.0/24</div>
+    </div>
+    <div class="layer l1">
+      <div class="lname">Outer VM — iot-host <span class="tagline">machine B · e.g. 192.168.122.37</span></div>
+      <div class="lnote">Vagrant + libvirt + Docker live here · creates 192.168.56.0/24 INSIDE itself</div>
+      <div class="l2">
+        <div><div class="lname">smbarkiS</div><div class="lnote">192.168.56.110 · p1/p2 server</div></div>
+        <div><div class="lname">smbarkiSW</div><div class="lnote">192.168.56.111 · p1 worker</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t"><code>192.168.56.110</code> does not exist from the laptop's point of view</div>
+    <p>Every <code>curl -H "Host: app1.com" http://192.168.56.110</code> in the subject — and live
+       at the defense — runs from a shell <strong>inside iot-host</strong>. When our docs say
+       "from the host", the host is machine B. This is not a limitation we work around; it
+       <em>is</em> the topology the subject's "host virtual machine" implies.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 7 ============ -->
+<section id="s7">
+  <h2><span class="num">7</span> Facts the research fixed before they hurt us</h2>
+  <p>
+    We ran a six-agent verification pass (plus two adversarial reviewers) over every Phase 0
+    assumption. Three corrections mattered:
+  </p>
+  <ol class="check">
+    <li><div><strong>Debian 13 ships Vagrant.</strong> Our notes said <em>"no vagrant package exists
+      in Debian/Ubuntu repos"</em> — false for Debian 13, which packages <code>vagrant</code> 2.3.7
+      <em>and</em> <code>vagrant-libvirt</code> 0.12.2. So inside the outer VM, installation is one
+      boring <code>apt install vagrant vagrant-libvirt</code> — no third-party repo, no compiling
+      Ruby extensions (historically the #1 breaker of clean runs). And Debian's 0.12.2
+      <strong>is</strong> the newest upstream vagrant-libvirt; upstream last committed in 2023.</div></li>
+    <li><div><strong>K3s stable moved</strong> to <code>v1.36.3+k3s1</code> (Traefik 3.7.8) — pins
+      bumped everywhere <em>before</em> anything was built with the old one.</div></li>
+    <li><div><strong>The <code>--cloud-init</code> transient-XML trap</strong> (§4.2) — found by an
+      adversarial reviewer that was explicitly told to try to break the plan. It did. That's the
+      review working as intended.</div></li>
+  </ol>
+  <p>
+    Also re-verified as still current: k3d v5.9.0, Argo CD v3.4.6 (a 3-day-old v3.5.0 exists; we
+    stay put and re-check before defense), GitLab CE 19.2.1, <code>wil42/playground</code> has
+    exactly tags <code>v1</code> + <code>v2</code>.
+  </p>
+</section>
+
+<hr>
+
+<!-- ============ 8 ============ -->
+<section id="s8">
+  <h2><span class="num">8</span> The gate — what we check after the VM boots</h2>
+  <p>Run the step:</p>
+  <div class="pre-wrap"><pre><code>sudo bash ~/iot-create-vm.sh</code></pre></div>
+  <p>
+    Expected: five numbered stages, then up to ~3 minutes of dots while first boot runs
+    <code>apt update</code>, then a box printing the VM's IP. Afterwards <strong>the observations
+    that decide everything</strong>:
+  </p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Check (from the laptop)</th><th>Proves</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>virsh list --all</code> → <code>iot-host running</code></td><td>the domain exists and is up</td></tr>
+      <tr><td>2</td><td><code>ssh -i ~/.ssh/iot_host_ed25519 sabdark@&lt;IP&gt; hostname</code> → <code>iot-host</code></td><td>cloud-init made our user + key + hostname</td></tr>
+      <tr><td>3</td><td><code>ssh … cloud-init status</code> → <code>status: done</code></td><td>first-boot config finished, no errors</td></tr>
+      <tr><td>4</td><td><code>ssh … ls -l /dev/kvm</code> → the device exists</td><td><strong>THE GATE: nested virtualisation works</strong></td></tr>
+      <tr><td>5</td><td><code>ssh … df -h /</code> → ~59 GB</td><td>growpart stretched the filesystem</td></tr>
+    </tbody>
+  </table></div>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <div class="t">Check 4 is the whole reason Phase 0 exists in this form</div>
+    <p>If <code>/dev/kvm</code> is absent inside the VM, the p1 machines could only run in software
+       emulation (minutes to boot, unusable to demo), and we fall back to building on bare metal —
+       a decision we'd make deliberately, note down, and be able to defend. With
+       <code>cpu mode=host-passthrough</code> on a CPU whose <code>kvm_intel nested=Y</code>, we
+       expect it to pass.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 9 ============ -->
+<section id="s9">
+  <h2><span class="num">9</span> What could go wrong</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td><code>ERROR Unknown OS name 'debian13'</code></td><td>old osinfo database</td>
+          <td>can't happen — script auto-falls-back to <code>debian12</code></td></tr>
+      <tr><td>"a domain named iot-host already exists"</td><td>a previous half-attempt</td>
+          <td><code>sudo virsh destroy iot-host; sudo virsh undefine iot-host --remove-all-storage</code>, re-run</td></tr>
+      <tr><td>No IP after 5 min</td><td>first boot still in apt, or network issue</td>
+          <td><code>sudo virsh console iot-host</code> (login <code>sabdark</code>/<code>iot42</code>), check <code>cloud-init status --long</code></td></tr>
+      <tr><td>SSH refused but ping works</td><td>cloud-init not finished</td><td>wait; check via console</td></tr>
+      <tr><td>SSH asks for a password</td><td>wrong key file</td><td>use <code>-i ~/.ssh/iot_host_ed25519</code> explicitly</td></tr>
+      <tr><td>VM boots, <code>/dev/kvm</code> missing inside</td><td>nested virt not passed through</td>
+          <td>the gate fails → we stop, discuss, fall back per plan</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<hr>
+
+<!-- ============ 10 ============ -->
+<section id="s10">
+  <h2><span class="num">10</span> New glossary entries</h2>
+  <dl class="gloss">
+    <div><dt>Cloud image</dt><dd>A disk with the OS pre-installed, personalised on first boot instead of at install time.</dd></div>
+    <div><dt>cloud-init</dt><dd>The program inside the image that does that personalisation.</dd></div>
+    <div><dt>NoCloud</dt><dd>cloud-init's "my config is on a local disk, not a cloud API" mode.</dd></div>
+    <div><dt>Seed / config drive</dt><dd>The tiny ISO carrying <code>user-data</code> + <code>meta-data</code>, labeled <code>cidata</code>.</dd></div>
+    <div><dt><code>user-data</code> / <code>meta-data</code></dt><dd>The wishlist (users, keys, packages…) / the identity (hostname, instance-id).</dd></div>
+    <div><dt>SMBIOS</dt><dd>The virtual BIOS's data area; we stamp <code>ds=nocloud</code> into its serial as a datasource hint.</dd></div>
+    <div><dt>qcow2</dt><dd>QEMU's disk format: sparse (grows with use) and resizable.</dd></div>
+    <div><dt>Sparse file</dt><dd>A file whose unwritten parts occupy no real disk space.</dd></div>
+    <div><dt><code>host-passthrough</code></dt><dd>"Give the guest my real CPU's features" — the door to nested KVM.</dd></div>
+    <div><dt>Transient vs persistent XML</dt><dd>A VM's live definition for <em>this run</em> vs the saved one it boots from next time. The <code>--cloud-init</code> trap lives in this gap.</dd></div>
+    <div><dt>qemu-guest-agent</dt><dd>A helper inside the guest letting libvirt ask it things — like its IP (<code>virsh domifaddr</code>).</dd></div>
+    <div><dt><code>qemu:///system</code> vs <code>:///session</code></dt><dd>libvirt's two worlds: the root-managed one with networking vs your private unprivileged one.</dd></div>
+  </dl>
+</section>
+
+<hr>
+
+<!-- ============ 11 ============ -->
+<section id="s11">
+  <h2><span class="num">11</span> Test yourself</h2>
+  <p>If you can't answer these without looking, re-read the linked section before we run the step.</p>
+
+  <details class="q"><summary><span class="qn">1</span><span>Why is the <code>nocloud</code> image the wrong choice, despite the name?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>The name means "no cloud-<em>init</em>", not "for non-cloud use". It has no cloud-init,
+      no SSH server and a locked root account — it would ignore our seed entirely and boot a VM with no way in.
+      → <a href="#s3">§3.1</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">2</span><span>cloud-init finds our seed two ways — name both. Why ship both?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>The ISO's volume label <code>cidata</code>, and the SMBIOS serial <code>ds=nocloud</code>.
+      Either suffices; a VM whose datasource is missed boots with no user and no key, so we make the failure
+      require two independent things to go wrong. → <a href="#s4">§4.1</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">3</span><span>Explain the <code>--cloud-init</code> trap in one sentence.</span><span class="chev">›</span></summary>
+    <div class="ans"><p>It attaches the seed only to the VM's transient (this-boot-only) definition and deletes
+      the ISO — so a reboot before cloud-init finishes produces a VM with no user, no key, no password, and no
+      recovery except rebuilding. → <a href="#s4">§4.2</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">4</span><span>Why 6144 MB of RAM and not 8192, when more is "better"?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>8 GiB would leave the laptop ~1 GiB of headroom; if the laptop swaps, the <em>nested</em>
+      VMs are the first casualty — during a live demo. 6 GiB covers p1 + p3 comfortably and can be raised later.
+      → <a href="#s5">§5.1</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">5</span><span>The disk says 60 GiB but the file is ~330 MB. Reconcile that.</span><span class="chev">›</span></summary>
+    <div class="ans"><p>qcow2 is sparse: 60 GiB is a ceiling the guest sees, not an allocation. The file grows
+      only as data is written. cloud-init's <code>growpart</code> stretches the guest's filesystem up to the
+      ceiling on first boot. → <a href="#s5">§5.1</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">6</span><span>Why can't the VM's disk live in your home directory? Two independent reasons.</span><span class="chev">›</span></summary>
+    <div class="ans"><p>QEMU runs as <code>libvirt-qemu</code>, which cannot traverse a mode-750 home directory;
+      and AppArmor's libvirt profile explicitly denies QEMU access to <code>@{HOME}</code>.
+      → <a href="#s5">§5.3</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">7</span><span>An evaluator curls <code>192.168.56.110</code> from your laptop and gets nothing. Is p2 broken?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>No. That network only exists inside the outer VM (machine B). All subject curls run from
+      a shell inside iot-host — "from the host" means machine B, never the laptop. → <a href="#s6">§6</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">8</span><span>What exactly does the <code>/dev/kvm</code>-inside check decide, and what is the fallback?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>Whether the outer VM can run hardware-accelerated nested VMs. Present → p1 proceeds inside
+      it. Absent → software emulation only (unusably slow), so we deliberately fall back to building on bare
+      metal, and note the decision for the defense. → <a href="#s8">§8</a></p></div></details>
+</section>
+
+<hr>
+
+<section id="next" style="padding-top:40px">
+  <div class="call ok"><div class="ic">→</div><div class="bd">
+    <div class="t">Next after the gate passes: Phase 0.4, then p1 slice 1.1</div>
+    <p style="margin-bottom:0">Inside <code>iot-host</code>: plain-apt install of
+      <code>vagrant</code>, <code>vagrant-libvirt</code>, <code>qemu-system-x86</code>,
+      <code>libvirt-daemon-system</code>, plus Docker CE; pre-cache the <code>debian/trixie64</code>
+      box; and then finally the five-line Vagrantfile from
+      <a href="index.html">Step One §7</a>.</p>
+  </div></div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement, L=document.getElementById('tLight'), D=document.getElementById('tDark');
+  function paint(t){
+    root.setAttribute('data-theme',t);
+    try{localStorage.setItem('iot-theme',t)}catch(e){}
+    L.classList.toggle('on',t==='light'); D.classList.toggle('on',t==='dark');
+  }
+  var saved=null; try{saved=localStorage.getItem('iot-theme')}catch(e){}
+  paint(saved || (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+  L.onclick=function(){paint('light')}; D.onclick=function(){paint('dark')};
+
+  var bar=document.getElementById('progress');
+  function prog(){
+    var h=document.documentElement.scrollHeight-window.innerHeight;
+    bar.style.width=(h>0?(window.scrollY/h*100):0)+'%';
+  }
+  window.addEventListener('scroll',prog,{passive:true}); prog();
+
+  var links=[].slice.call(document.querySelectorAll('#nav a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))}).filter(Boolean);
+  function spy(){
+    var best=null, bestTop=-1e9;
+    secs.forEach(function(s){
+      var t=s.getBoundingClientRect().top-90;
+      if(t<=0 && t>bestTop){bestTop=t;best=s}
+    });
+    if(!best) best=secs[0];
+    links.forEach(function(a){a.classList.toggle('active', a.getAttribute('href')==='#'+best.id)});
+  }
+  window.addEventListener('scroll',spy,{passive:true}); spy();
+
+  [].forEach.call(document.querySelectorAll('.pre-wrap'),function(w){
+    var b=document.createElement('button'); b.className='copy'; b.textContent='copy';
+    b.onclick=function(){
+      var txt=w.querySelector('code').innerText;
+      navigator.clipboard.writeText(txt).then(function(){
+        b.textContent='copied'; b.classList.add('done');
+        setTimeout(function(){b.textContent='copy'; b.classList.remove('done')},1400);
+      });
+    };
+    w.appendChild(b);
+  });
+
+  var sb=document.getElementById('sidebar'), sc=document.getElementById('scrim'), mb=document.getElementById('menuBtn');
+  function close(){sb.classList.remove('open'); sc.classList.remove('open')}
+  mb.onclick=function(){sb.classList.toggle('open'); sc.classList.toggle('open')};
+  sc.onclick=close;
+  links.forEach(function(a){a.addEventListener('click',close)});
+})();
+</script>
+</body>
+</html>
