@@ -129,7 +129,7 @@ to fail a live demo and a second thing to justify.
   If a newer version has landed, bump the tag in `confs/gitlab.yaml`. Answer for
   the evaluator: *"it is the latest release; I pinned it by digest-stable tag so
   the demo cannot change under me mid-evaluation."*
-- The app is reached at `http://localhost/` through `app-repo/ingress.yaml`,
+- The app is reached at `http://localhost:8888/` through `app-repo/ingress.yaml`,
   never `kubectl port-forward` — a forward dies when Argo CD replaces the pod.
   Only the Argo CD UI, which is not graded, is forwarded.
 - `strategy: Recreate` matters: two pods on one `ReadWriteOnce` PVC would corrupt data.
