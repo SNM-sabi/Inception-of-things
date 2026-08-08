@@ -71,9 +71,16 @@ fi
 # --- k3d --------------------------------------------------------------------
 # Pinned: k3d's default k3s image is the one this release was tested against,
 # so pinning k3d pins the cluster too without guessing an image tag.
-if command -v k3d >/dev/null 2>&1; then
-	ok "k3d already installed ($(k3d version | head -1))"
+#
+# Note both version checks below compare rather than just testing for presence.
+# "Skip if the binary exists" silently keeps whatever an earlier, unpinned
+# script left behind — which is exactly how an unpinned argocd CLI ended up
+# installed here while CLAUDE.md pinned a different one.
+K3D_CURRENT="$(k3d version 2>/dev/null | awk '/^k3d version/ {print $3; exit}')"
+if [ "${K3D_CURRENT}" = "${K3D_VERSION}" ]; then
+	ok "k3d ${K3D_VERSION} already installed"
 else
+	[ -n "${K3D_CURRENT}" ] && log "k3d ${K3D_CURRENT} found, replacing with pinned ${K3D_VERSION}"
 	log "installing k3d ${K3D_VERSION}"
 	curl -fsSL https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh \
 		| sudo TAG="${K3D_VERSION}" bash
@@ -81,9 +88,12 @@ else
 fi
 
 # --- Argo CD CLI ------------------------------------------------------------
-if command -v argocd >/dev/null 2>&1; then
-	ok "argocd CLI already installed"
+# Must match the server version installed by create_cluster.sh.
+ARGOCD_CURRENT="$(argocd version --client --short 2>/dev/null | awk '{print $2}' | cut -d+ -f1)"
+if [ "${ARGOCD_CURRENT}" = "${ARGOCD_VERSION}" ]; then
+	ok "argocd CLI ${ARGOCD_VERSION} already installed"
 else
+	[ -n "${ARGOCD_CURRENT}" ] && log "argocd CLI ${ARGOCD_CURRENT} found, replacing with pinned ${ARGOCD_VERSION}"
 	log "installing argocd CLI ${ARGOCD_VERSION}"
 	curl -fsSL -o /tmp/argocd \
 		"https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-${ARCH}"
