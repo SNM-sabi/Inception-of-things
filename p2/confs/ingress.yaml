@@ -1,0 +1,26 @@
+# p2 — ONE Ingress object carrying the whole routing table (subject p9):
+#   Host app1.com -> app-one
+#   Host app2.com -> app-two          (added in slice 2.4)
+#   anything else -> app-three        (added in slice 2.5 as spec.defaultBackend)
+#
+# One object on purpose: Traefik treats the default backend as a global
+# singleton (a second Ingress declaring one is silently dropped), and p11's
+# red box requires showing the Ingress live — one object, one screen.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apps
+spec:
+  ingressClassName: traefik   # explicit: the controller K3s ships
+  rules:
+    - host: app1.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app-one
+                port:
+                  number: 80
