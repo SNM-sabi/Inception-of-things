@@ -178,9 +178,18 @@ ssh -F <(vagrant ssh-config) smbarkiS hostname
 
 We don't touch the network in slice 1.1, but you need the mental model now, because it explains why the *next* slice exists at all.
 
-**Every Vagrant VM gets a first network card that Vagrant fully controls, and it is always NAT.** NAT means the VM can reach the internet through the host, but nothing can reach *in*. Vagrant needs this card for `vagrant ssh` (it forwards a host port to the guest's port 22).
+**Every Vagrant VM gets a first network card that Vagrant fully controls.** That card exists for one purpose: so `vagrant ssh` can reach the box. What exactly it looks like depends on the provider:
 
-The consequence that bites everyone: **under NAT, every single VM gets the exact same IP address — `10.0.2.15`.** Both of our machines will have it. It's not a conflict, because each lives in its own private NAT world — but it means `10.0.2.15` is *meaningless* as an address for one VM to talk to another.
+- Under **VirtualBox** it's NAT, and every single VM gets the exact same IP — `10.0.2.15`.
+- Under **our libvirt setup** (✅ *observed in slice 1.1*): it's a DHCP lease on a management
+  network vagrant-libvirt creates, `192.168.121.0/24` — our first machine got
+  `eth0 = 192.168.121.46`, and the default route points out through it.
+
+The consequence is the same either way, and it's the one that bites everyone: **NIC 1's address
+is Vagrant's plumbing, not ours.** It's assigned by DHCP (or identical on every VM), it can
+change, and it is not the address the subject demands. Kubernetes, left to itself, picks exactly
+this address — because it follows the default route. That is why slice 1.4's `--node-ip` flag
+exists, and why "the cluster IP" must live on a *second* card that we control.
 
 So in slice 1.2 we add a **second** network card on a **host-only / private network**: a virtual switch that connects the host and the VMs to each other, and nothing else. On that card we assign the fixed addresses the subject demands:
 
@@ -237,7 +246,11 @@ vagrant up
 1. `==> smbarkiS: Box 'debian/trixie64' could not be found. Attempting to find and install...` then a download progress bar. **First run only** — after that it's cached.
 2. `==> smbarkiS: Creating domain with the following settings...` — "domain" is libvirt's word for a VM.
 3. `==> smbarkiS: Setting hostname...`
-4. `==> smbarkiS: Rsyncing folder: /home/.../p1/ => /vagrant` — Vagrant shares the project folder into the guest at `/vagrant`. Under libvirt this is a **one-way rsync**, host → guest. Remember that; it matters much later (it's why we won't try to copy a file *out* of the guest).
+4. Vagrant shares the project folder into the guest at `/vagrant`. *(✅ Observed in the real run:
+   our setup mounted it over **NFS** — a live, two-way mount — rather than the one-way rsync this
+   line originally predicted. The lesson carried by this step got **stronger**: anything a guest
+   writes under `/vagrant` lands directly in the project directory, next to the Vagrantfile, in
+   the git repo. That is exactly why the K3s join token must never travel through `/vagrant`.)*
 5. No errors, and the prompt comes back.
 
 Then the proof:
