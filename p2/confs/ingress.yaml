@@ -1,11 +1,19 @@
-# p2 — ONE Ingress object carrying the whole routing table (subject p9):
+# p2 — the routing table (subject p9):
 #   Host app1.com -> app-one
-#   Host app2.com -> app-two          (added in slice 2.4)
-#   anything else -> app-three        (added in slice 2.5 as spec.defaultBackend)
+#   Host app2.com -> app-two
+#   anything else -> app-three ("Otherwise, app3 will be selected by default")
 #
-# One object on purpose: Traefik treats the default backend as a global
-# singleton (a second Ingress declaring one is silently dropped), and p11's
-# red box requires showing the Ingress live — one object, one screen.
+# TWO Ingress objects, and the split is Traefik's requirement, verified live:
+# Traefik v3.7 ignores spec.defaultBackend when the same Ingress also carries
+# rules (observed: API object showed the default, router never materialised,
+# bare-IP curl stayed 404). In a rule-less Ingress the defaultBackend compiles
+# to Traefik's unbeatable lowest-priority router — the construct that MEANS
+# "when nothing else matches". Only ONE object may declare a defaultBackend:
+# Traefik treats it as a global singleton and silently drops a second one.
+# Never add a router.priority annotation here — it would outrank the rules.
+#
+# `kubectl describe ingress` (no name) still shows both on one screen for the
+# p11 red-box walkthrough.
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -34,3 +42,15 @@ spec:
                 name: app-two
                 port:
                   number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apps-default
+spec:
+  ingressClassName: traefik
+  defaultBackend:
+    service:
+      name: app-three
+      port:
+        number: 80
