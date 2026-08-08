@@ -1,0 +1,40 @@
+---
+# ALTERNATIVE ROUTE — only needed if you install GitLab with the official Helm
+# chart instead of confs/gitlab.yaml. See scripts/gitlab-helm.sh.
+# Everything not strictly required is disabled to fit on a laptop VM.
+global:
+  edition: ce
+  hosts:
+    domain: gitlab.local
+    https: false
+  ingress:
+    configureCertmanager: false
+    tls:
+      enabled: false
+  kas:
+    enabled: false
+  shell:
+    port: 32022
+
+certmanager:
+  install: false
+
+nginx-ingress:
+  enabled: false          # k3d already ships Traefik
+
+prometheus:
+  install: false
+
+gitlab-runner:
+  install: false
+
+registry:
+  enabled: false
+
+gitlab:
+  webservice:
+    minReplicas: 1
+    maxReplicas: 1
+  sidekiq:
+    minReplicas: 1
+    maxReplicas: 1

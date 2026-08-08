@@ -1,0 +1,32 @@
+---
+# This file belongs in your GITLAB PROJECT (root/iot-app), under manifests/.
+# Argo CD reads it from there — not from this folder.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playground
+  namespace: dev
+  labels:
+    app: playground
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: playground
+  template:
+    metadata:
+      labels:
+        app: playground
+    spec:
+      containers:
+        - name: playground
+          image: wil42/playground:v1     # change to v2 in GitHub for the demo
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8888
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 3
+            periodSeconds: 5

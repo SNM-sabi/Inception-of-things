@@ -1,0 +1,33 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: playground
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    # In-cluster GitLab. Argo CD resolves this via Kubernetes DNS, which is why
+    # it must match `external_url` in confs/gitlab.yaml exactly.
+    # Adjust the project path (root/<project>) to whatever you created.
+    repoURL: http://gitlab.gitlab.svc.cluster.local/root/iot-app.git
+    targetRevision: HEAD
+    path: manifests
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

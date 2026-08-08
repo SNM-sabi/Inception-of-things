@@ -1,0 +1,15 @@
+---
+# This file belongs in your GITLAB PROJECT (root/iot-app), under manifests/.
+apiVersion: v1
+kind: Service
+metadata:
+  name: playground
+  namespace: dev
+spec:
+  type: ClusterIP
+  selector:
+    app: playground
+  ports:
+    - name: http
+      port: 8888
+      targetPort: 8888
