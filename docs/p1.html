@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Part 1 — the two machines, as actually built — Inception-of-Things</title>
+<style>
+:root{
+  --bg:#fbfbfd; --panel:#ffffff; --ink:#1a1d23; --ink-soft:#5b6270; --ink-faint:#8b93a1;
+  --line:#e5e7ec; --line-soft:#eef0f4;
+  --accent:#4f46e5; --accent-soft:#eef0ff; --accent-ink:#3730a3;
+  --ok:#0f8a5f; --ok-soft:#e7f6ef;
+  --warn:#b45309; --warn-soft:#fdf3e3;
+  --danger:#c0392f; --danger-soft:#fdeeec;
+  --code-bg:#f4f5f8; --code-ink:#1f2430;
+  --shadow:0 1px 2px rgba(16,20,30,.04), 0 8px 24px rgba(16,20,30,.06);
+  --radius:12px;
+  --sidebar:280px;
+}
+html[data-theme="dark"]{
+  --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+  --line:#252932; --line-soft:#1d212a;
+  --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+  --ok:#4ade9c; --ok-soft:#12251d;
+  --warn:#e0a33c; --warn-soft:#2a2113;
+  --danger:#f0796c; --danger-soft:#2b1614;
+  --code-bg:#1a1e26; --code-ink:#dfe3ea;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+@media (prefers-color-scheme: dark){
+  html:not([data-theme="light"]){
+    --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+    --line:#252932; --line-soft:#1d212a;
+    --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+    --ok:#4ade9c; --ok-soft:#12251d;
+    --warn:#e0a33c; --warn-soft:#2a2113;
+    --danger:#f0796c; --danger-soft:#2b1614;
+    --code-bg:#1a1e26; --code-ink:#dfe3ea;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:24px}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+code,kbd,pre{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:100;transition:width .1s linear}
+.wrap{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;max-width:1320px;margin:0 auto}
+aside{
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 20px 40px;
+  border-right:1px solid var(--line);background:var(--bg);
+}
+aside .brand{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;margin-bottom:4px}
+aside .brand-sub{font-size:15px;font-weight:650;line-height:1.35;margin-bottom:20px}
+nav a{
+  display:flex;gap:10px;align-items:baseline;padding:7px 10px;margin:1px 0;border-radius:8px;
+  color:var(--ink-soft);text-decoration:none;font-size:14px;line-height:1.4;
+  border-left:2px solid transparent;
+}
+nav a .n{color:var(--ink-faint);font-size:12px;font-variant-numeric:tabular-nums;min-width:14px}
+nav a:hover{background:var(--line-soft);color:var(--ink)}
+nav a.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;border-left-color:var(--accent)}
+nav a.active .n{color:var(--accent-ink)}
+.sidebar-foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-faint)}
+.sidebar-foot a{color:var(--ink-soft)}
+main{padding:56px 56px 120px;min-width:0;max-width:880px}
+.eyebrow{display:inline-block;font-size:12px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent-ink);background:var(--accent-soft);padding:5px 11px;border-radius:99px;margin-bottom:18px}
+h1{font-size:clamp(30px,4.4vw,42px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em;font-weight:720}
+.lede{font-size:18px;line-height:1.65;color:var(--ink-soft);margin:0 0 10px}
+.meta{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-faint);margin-top:22px;
+  padding-top:18px;border-top:1px solid var(--line)}
+section{padding-top:52px;scroll-margin-top:20px}
+h2{font-size:25px;line-height:1.25;margin:0 0 6px;letter-spacing:-.015em;font-weight:680;display:flex;gap:12px;align-items:baseline}
+h2 .num{font-size:14px;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;
+  background:var(--accent-soft);padding:3px 9px;border-radius:7px;line-height:1.4}
+h3{font-size:17px;margin:30px 0 8px;font-weight:660;letter-spacing:-.005em}
+p{margin:12px 0}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+strong{font-weight:660}
+a{color:var(--accent-ink)}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+p code, li code, td code, th code, h3 code, dd code{
+  background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:5px;font-size:.875em;
+  border:1px solid var(--line-soft);
+}
+pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:var(--radius);
+  overflow-x:auto;font-size:13.5px;line-height:1.65;border:1px solid var(--line);margin:16px 0}
+pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
+.pre-wrap{position:relative}
+.copy{position:absolute;top:9px;right:9px;font:inherit;font-size:11.5px;font-weight:600;
+  padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);
+  cursor:pointer;opacity:0;transition:opacity .12s}
+.pre-wrap:hover .copy{opacity:1}
+.copy:hover{color:var(--ink);border-color:var(--ink-faint)}
+.copy.done{color:var(--ok);border-color:var(--ok)}
+.tbl{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{text-align:left;font-weight:650;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-faint);padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+td{padding:12px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--line-soft)}
+.call{display:grid;grid-template-columns:auto 1fr;gap:12px;margin:20px 0;padding:14px 16px;
+  border-radius:var(--radius);border:1px solid var(--line);background:var(--panel)}
+.call .ic{font-size:16px;line-height:1.5}
+.call .bd{min-width:0}
+.call .bd > :first-child{margin-top:0}
+.call .bd > :last-child{margin-bottom:0}
+.call .t{font-weight:660;font-size:14px;margin-bottom:2px}
+.call.info{background:var(--accent-soft);border-color:transparent}
+.call.info .t{color:var(--accent-ink)}
+.call.warn{background:var(--warn-soft);border-color:transparent}
+.call.warn .t{color:var(--warn)}
+.call.danger{background:var(--danger-soft);border-color:transparent}
+.call.danger .t{color:var(--danger)}
+.call.ok{background:var(--ok-soft);border-color:transparent}
+.call.ok .t{color:var(--ok)}
+.call.quote{background:var(--panel);border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0}
+.call.quote .t{color:var(--accent-ink)}
+.call.quote em{color:var(--ink)}
+.diagram{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:22px;margin:20px 0;box-shadow:var(--shadow)}
+.netrow{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start;margin:8px 0}
+.netrow .nname{font-weight:650;font-size:14px;padding:8px 12px;border-radius:8px;background:var(--accent-soft);color:var(--accent-ink);text-align:center}
+.netrow .nhosts{display:flex;flex-wrap:wrap;gap:8px}
+.netrow .nhosts span{border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:13.5px;background:var(--panel)}
+.netrow .nhosts code{font-size:12.5px}
+.status{list-style:none;padding:0;margin:16px 0}
+.status li{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:9px 12px;margin:5px 0;
+  border-radius:9px;background:var(--panel);border:1px solid var(--line);font-size:14.5px;align-items:baseline}
+.status li .s{font-weight:700}
+.status li.done .s{color:var(--ok)}
+.status li.here{background:var(--accent-soft);border-color:transparent}
+.status li.here .s{color:var(--accent-ink)}
+.status li.todo{color:var(--ink-soft)}
+.status li.todo .s{color:var(--ink-faint)}
+details.q{border:1px solid var(--line);border-radius:10px;margin:9px 0;background:var(--panel);overflow:hidden}
+details.q summary{cursor:pointer;padding:13px 16px;font-weight:600;font-size:15px;list-style:none;
+  display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary .qn{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);
+  font-size:12px;font-weight:700;display:grid;place-items:center}
+details.q summary .chev{color:var(--ink-faint);font-size:12px;transition:transform .15s}
+details.q[open] summary .chev{transform:rotate(90deg)}
+details.q .ans{padding:0 16px 15px 50px;color:var(--ink-soft);font-size:14.5px}
+details.q .ans > :first-child{margin-top:0}
+.toggle{position:fixed;top:18px;right:20px;z-index:90;display:flex;gap:6px;
+  background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:4px;box-shadow:var(--shadow)}
+.toggle button{border:0;background:none;cursor:pointer;font:inherit;font-size:14px;line-height:1;
+  padding:7px 10px;border-radius:99px;color:var(--ink-faint)}
+.toggle button.on{background:var(--accent-soft);color:var(--accent-ink)}
+.menu-btn{display:none}
+@media (max-width:1000px){
+  .wrap{grid-template-columns:1fr}
+  aside{position:fixed;inset:0 auto 0 0;width:290px;z-index:80;transform:translateX(-100%);
+    transition:transform .2s ease;box-shadow:var(--shadow);background:var(--panel)}
+  aside.open{transform:none}
+  main{padding:76px 22px 100px}
+  .menu-btn{display:grid;place-items:center;position:fixed;top:18px;left:18px;z-index:90;
+    width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);cursor:pointer;font-size:17px;box-shadow:var(--shadow)}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:79;display:none}
+  .scrim.open{display:block}
+  .netrow{grid-template-columns:1fr}
+}
+@media print{
+  aside,.toggle,.menu-btn,#progress,.copy{display:none}
+  .wrap{grid-template-columns:1fr}
+  main{padding:0;max-width:100%}
+  details.q{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
+<div class="scrim" id="scrim"></div>
+<div class="toggle" role="group" aria-label="Colour theme">
+  <button id="tLight" title="Light">☀</button>
+  <button id="tDark" title="Dark">☾</button>
+</div>
+
+<div class="wrap">
+
+<aside id="sidebar">
+  <div class="brand">Inception-of-Things</div>
+  <div class="brand-sub">Part 1 —<br>the two machines</div>
+  <nav id="nav">
+    <a href="#s0"><span class="n">0</span><span>Where we are</span></a>
+    <a href="#s1"><span class="n">1</span><span>The Vagrantfile</span></a>
+    <a href="#s2"><span class="n">2</span><span>Commands you'll type</span></a>
+    <a href="#s3"><span class="n">3</span><span>The network, as built</span></a>
+    <a href="#s4"><span class="n">4</span><span>default_prefix trade-off</span></a>
+    <a href="#s5"><span class="n">5</span><span>What's next (K3s)</span></a>
+    <a href="#s6"><span class="n">6</span><span>Test yourself</span></a>
+  </nav>
+  <div class="sidebar-foot">
+    Part of the series:<br>
+    <a href="index.html">1 · Step One from zero</a><br>
+    <a href="phase0.html">2 · Phase 0 in practice</a><br>
+    <strong>3 · Part 1: the two machines</strong><br><br>
+    Source: <a href="P1.md">P1.md</a><br>
+    Plan: <a href="../PLAN.md">PLAN.md</a> · Rules: <a href="../CLAUDE.md">CLAUDE.md</a>
+  </div>
+</aside>
+
+<main>
+
+<span class="eyebrow">Part 1 · slices 1.1–1.3 · all observed</span>
+<h1>The two machines, as actually built</h1>
+<p class="lede">
+  The two VMs exist — named right, addressed right, sized right. Everything on this page
+  was <strong>observed on the real machines</strong>, not planned. And it is deliberately
+  limited to what you'll actually need to know and say.
+</p>
+<div class="meta">
+  <span>~8 min read</span><span>·</span>
+  <span>Boot times: 1m49 / 2m02 / 2m10</span>
+</div>
+
+<!-- ============ 0 ============ -->
+<section id="s0">
+  <h2><span class="num">0</span> Where we are</h2>
+  <ul class="status">
+    <li class="done"><span class="s">✅</span><span><strong>1.1</strong> One machine, box + hostname — <code>hostname</code> → <code>smbarkiS</code>, passwordless</span></li>
+    <li class="done"><span class="s">✅</span><span><strong>1.2</strong> Static IP <code>.110</code> on <code>eth1</code>, 1 CPU / 1024 MB, domain named <code>smbarkiS</code></span></li>
+    <li class="done"><span class="s">✅</span><span><strong>1.3</strong> Second machine <code>smbarkiSW</code>, <code>.111</code>, 512 MB — network reused, VM↔VM ping works</span></li>
+    <li class="here"><span class="s">⬅</span><span><strong>1.4</strong> K3s <strong>server</strong> on smbarkiS — next</span></li>
+    <li class="todo"><span class="s">○</span><span><strong>1.5</strong> K3s <strong>agent</strong> on smbarkiSW, joined cluster</span></li>
+    <li class="todo"><span class="s">○</span><span><strong>1.6–1.7</strong> kubectl comfort + the clean-run gate</span></li>
+  </ul>
+</section>
+
+<hr>
+
+<!-- ============ 1 ============ -->
+<section id="s1">
+  <h2><span class="num">1</span> The Vagrantfile, as it now stands</h2>
+  <div class="pre-wrap"><pre><code>Vagrant.configure("2") do |config|
+  config.vm.box = "debian/trixie64"
+
+  config.vm.define "smbarkiS" do |server|
+    server.vm.hostname = "smbarkiS"
+    server.vm.network :private_network, ip: "192.168.56.110"
+    server.vm.provider :libvirt do |lv|
+      lv.default_prefix = ""      # domain is named smbarkiS, not p1_smbarkiS
+      lv.memory = 1024            # subject p6: 512 MB or 1024 — the server gets 1024
+      lv.cpus   = 1               # subject p6: 1 CPU
+    end
+  end
+
+  config.vm.define "smbarkiSW" do |worker|
+    worker.vm.hostname = "smbarkiSW"
+    worker.vm.network :private_network, ip: "192.168.56.111"
+    worker.vm.provider :libvirt do |lv|
+      lv.default_prefix = ""
+      lv.memory = 512             # agent only — the bare minimum the subject asks for
+      lv.cpus   = 1
+    end
+  end
+end</code></pre></div>
+
+  <p>Three things you need to be able to say about its <strong>shape</strong>:</p>
+
+  <h3>It mirrors the subject's own example</h3>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p7</div>
+    <p>The subject prints a skeleton Vagrantfile: <code>config.vm.box</code> once at the top, then one
+       <code>define</code> block per machine. Ours is that skeleton, filled in. When an evaluator asks
+       "why is it structured like this?" — <em>"it's the structure your own subject shows on page 7."</em></p>
+  </div></div>
+
+  <h3><code>config.</code> vs <code>server.</code> is scoping — and mixing them up is a real bug</h3>
+  <p>
+    Anything on <code>config.</code> applies to <em>every</em> machine; anything on the block variable
+    applies to <em>that machine only</em>. Example of the mistake, taken from the subject's own skeleton —
+    p7 writes, inside the <code>wilS</code> block:
+  </p>
+  <div class="pre-wrap"><pre><code>config.vm.provision :shell, :inline =&gt; SHELL   # ← config., inside a define block!</code></pre></div>
+  <div class="call danger"><div class="ic">⛔</div><div class="bd">
+    <div class="t">That provision runs on BOTH machines</div>
+    <p>— even though it's written inside <code>wilS</code>'s block, because it hangs the setting on
+       <code>config.</code>. If we did that with the server's K3s install line, the worker would try to
+       install a K3s <em>server</em> too. Rule: inside a <code>define</code> block, <strong>never</strong>
+       type <code>config.</code> — only the block's own variable.</p>
+  </div></div>
+
+  <h3>Why the worker gets 512 MB and the server 1024</h3>
+  <div class="call quote"><div class="ic">📕</div><div class="bd">
+    <div class="t">Subject p6</div>
+    <p><em>"It is STRONGLY advised to allow only the bare minimum in terms of resources:
+       1 CPU and 512 MB of RAM (or 1024)."</em> — the parenthesis is the permission.</p>
+  </div></div>
+  <p>
+    The server runs the whole control plane — API server, datastore, scheduler, plus Traefik in p2 —
+    and OOM-loops at 512. The worker runs only the K3s agent. So: minimum where it fits, the allowed
+    1024 where the minimum doesn't.
+  </p>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <div class="t">Observed values — don't let them spook you at the defense</div>
+    <p>Server <code>MemTotal: 990576 kB</code>, worker <code>MemTotal: 475244 kB</code>. You never see
+       the round number because the kernel keeps a slice for itself. <strong>Those values are
+       correct.</strong></p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 2 ============ -->
+<section id="s2">
+  <h2><span class="num">2</span> The commands you'll actually type</h2>
+  <p>
+    All from inside <code>p1/</code> — Vagrant finds the Vagrantfile in the current directory.
+    With two machines, most commands now want a machine name:
+  </p>
+  <div class="tbl"><table>
+    <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>vagrant status</code></td><td>Both machines and their states — your first move, always</td></tr>
+      <tr><td><code>vagrant up</code></td><td>Brings up <strong>everything not running</strong> — it skipped smbarkiS and built only smbarkiSW in slice 1.3</td></tr>
+      <tr><td><code>vagrant up smbarkiSW</code></td><td>Just that machine</td></tr>
+      <tr><td><code>vagrant ssh smbarkiS</code></td><td>Log into the server (name required now — plain <code>vagrant ssh</code> errors with two machines)</td></tr>
+      <tr><td><code>vagrant ssh smbarkiSW -c "hostname"</code></td><td>Run one command, print, exit — how every proof in this series is taken</td></tr>
+      <tr><td><code>vagrant destroy -f</code></td><td>Delete <strong>both</strong> VMs, no confirmation</td></tr>
+      <tr><td><code>vagrant destroy -f smbarkiSW</code></td><td>Delete just the worker (handy when only the agent side broke)</td></tr>
+      <tr><td><code>vagrant reload smbarkiS</code></td><td>Reboot + re-read the Vagrantfile (config changes like memory need destroy/up under libvirt)</td></tr>
+      <tr><td><code>vagrant provision smbarkiS</code></td><td>Re-run provisioning scripts without rebooting — the fast loop once K3s scripts exist</td></tr>
+    </tbody>
+  </table></div>
+  <p>
+    And the hypervisor's view, from iot-host: <code>virsh list --all</code> (both domains),
+    <code>virsh net-list --all</code> (the networks).
+  </p>
+</section>
+
+<hr>
+
+<!-- ============ 3 ============ -->
+<section id="s3">
+  <h2><span class="num">3</span> The network, as it actually exists now</h2>
+
+  <div class="diagram">
+    <div class="netrow">
+      <div class="nname">p10 / virbr2<br><code>192.168.56.0/24</code></div>
+      <div class="nhosts">
+        <span><strong>iot-host</strong> <code>.1</code> (gateway)</span>
+        <span><strong>smbarkiS</strong> eth1 <code>.110</code> static</span>
+        <span><strong>smbarkiSW</strong> eth1 <code>.111</code> static</span>
+      </div>
+    </div>
+    <div class="netrow">
+      <div class="nname">vagrant-libvirt<br><code>192.168.121.0/24</code></div>
+      <div class="nhosts">
+        <span><strong>iot-host</strong> <code>.1</code></span>
+        <span><strong>smbarkiS</strong> eth0 <code>.233</code> DHCP</span>
+        <span><strong>smbarkiSW</strong> eth0 <code>.234</code> DHCP</span>
+      </div>
+    </div>
+  </div>
+
+  <p>Facts observed — each one a likely evaluator question:</p>
+  <ul>
+    <li><strong><code>p10</code> was reused, not duplicated.</strong> The worker's
+      <code>private_network</code> line names the same subnet, so vagrant-libvirt attached it to the
+      same virtual switch. One network, three legs: <code>.1</code>, <code>.110</code>, <code>.111</code>.</li>
+    <li><strong>iot-host pings both VMs</strong> (~0.7 ms) — because it holds <code>.1</code> on that
+      switch. This is mechanically how p2's <code>curl http://192.168.56.110</code> from "the host"
+      will work.</li>
+    <li><strong>Worker reaches server over <code>.56</code></strong>:
+      <code>ping 192.168.56.110</code> from smbarkiSW → 2/2, 0% loss.
+      <strong>The K3s join path exists before K3s does.</strong> When the agent later joins the server
+      at <code>https://192.168.56.110:6443</code>, the packets take exactly the route we just proved.</li>
+  </ul>
+
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">The eth0 lesson, with real numbers</div>
+    <p>The server's <code>eth0</code> was <code>192.168.121.46</code> on the 1.1 build and
+       <code>192.168.121.233</code> after the 1.2 rebuild — same Vagrantfile, different address,
+       because it's a DHCP lease that Vagrant owns. <code>eth1</code> stayed <code>.110</code> because
+       <em>we</em> declared it. Anything that depends on eth0's address is silently broken by the next
+       rebuild. That, in one example, is why slice 1.4 will pass <code>--node-ip 192.168.56.110</code>
+       to K3s: left alone, K3s picks the default-route interface — eth0.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 4 ============ -->
+<section id="s4">
+  <h2><span class="num">4</span> One trade-off you must be able to defend: <code>default_prefix = ""</code></h2>
+  <p>
+    Without it, the libvirt domain is named <code>p1_smbarkiS</code>. With it, <code>virsh list</code>
+    shows plain <code>smbarkiS</code> — matching the subject's example, which names the machine at the
+    provider level (<code>v.customize [..., "--name", "wilS"]</code>, p7).
+  </p>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">The cost — say it before the evaluator finds it</div>
+    <p><strong>p2 will also define a domain named <code>smbarkiS</code></strong>, so p1's and p2's VMs
+       can never run at the same time — the second <code>vagrant up</code> would fail with a libvirt
+       "domain already exists" error. Our working rule already requires destroying a part before testing
+       another, so the collision can't happen in practice. Defense sentence: <em>"p1 and p2 are mutually
+       exclusive by design; the clean-run rule destroys one before booting the other."</em></p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- ============ 5 ============ -->
+<section id="s5">
+  <h2><span class="num">5</span> What's next — and why you already understand it</h2>
+  <p>
+    Slice 1.4 installs K3s on the server. The two ideas that decide whether it works, you've now
+    <em>seen</em> rather than read:
+  </p>
+  <ol>
+    <li><strong><code>--node-ip 192.168.56.110</code></strong> — because of the eth0 lesson above.
+      K3s would otherwise advertise a DHCP lease that changes on every rebuild, and the subject's p8
+      screenshots explicitly show the wrong-IP configuration as the <em>broken</em> one.</li>
+    <li><strong>The join token is pre-seeded, not copied.</strong> The server will be <em>told</em>
+      which token to use (a variable set in the Vagrantfile and passed to both machines), instead of
+      the worker fishing the generated one out of the server's filesystem. Reasons you can now picture:
+      <code>/vagrant</code> is a live NFS mount of the git repo — a guest-written token file would land
+      next to the Vagrantfile instantly — and a stale copied token survives <code>vagrant destroy</code>
+      and breaks the next join with a CA-hash mismatch.</li>
+  </ol>
+</section>
+
+<hr>
+
+<!-- ============ 6 ============ -->
+<section id="s6">
+  <h2><span class="num">6</span> Test yourself</h2>
+
+  <details class="q"><summary><span class="qn">1</span><span>A provision line written inside the <code>smbarkiS</code> block starts with <code>config.</code> — what happens?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>It applies to every machine, not just smbarkiS — the worker would run the server's
+      provisioning too. Inside a define block, only use the block's own variable. → <a href="#s1">§1</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">2</span><span>The evaluator runs <code>free -m</code> on the worker and sees ~464 MB, not 512. Problem?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>No. The kernel reserves memory for itself; MemTotal is what's left. Observed:
+      475244 kB on the worker, 990576 kB on the server. Correct values. → <a href="#s1">§1</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">3</span><span>Plain <code>vagrant ssh</code> now errors. Why, and what's the fix?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>With two defined machines Vagrant needs to know which one:
+      <code>vagrant ssh smbarkiS</code> or <code>vagrant ssh smbarkiSW</code>. → <a href="#s2">§2</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">4</span><span>Who answers at <code>192.168.56.1</code>, and why does that address exist?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>iot-host itself — vagrant-libvirt gave it the gateway leg of the virtual switch
+      (<code>virbr2</code>) it built from our <code>private_network</code> lines. It's also why the host
+      can ping/curl the VMs at all. → <a href="#s3">§3</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">5</span><span>Prove — with a command that works today — that the worker will reach the K3s API in slice 1.5.</span><span class="chev">›</span></summary>
+    <div class="ans"><p><code>vagrant ssh smbarkiSW -c "ping -c 2 192.168.56.110"</code> → 2/2, 0% loss.
+      The agent will dial <code>https://192.168.56.110:6443</code> over that exact route. → <a href="#s3">§3</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">6</span><span>Why can't p1 and p2 run at the same time, and why is that acceptable?</span><span class="chev">›</span></summary>
+    <div class="ans"><p>Both name a domain <code>smbarkiS</code> (because <code>default_prefix = ""</code>).
+      Acceptable because the clean-run rule destroys one part before booting another — and it matches the
+      subject's provider-level naming example. → <a href="#s4">§4</a></p></div></details>
+
+  <details class="q"><summary><span class="qn">7</span><span>The server's eth0 changed between two builds. Recite the numbers and the conclusion.</span><span class="chev">›</span></summary>
+    <div class="ans"><p><code>192.168.121.46</code> → <code>192.168.121.233</code>. DHCP plumbing changes;
+      declared addresses don't. Never let the cluster depend on eth0 — hence <code>--node-ip</code>.
+      → <a href="#s3">§3</a>, <a href="#s5">§5</a></p></div></details>
+</section>
+
+<hr>
+
+<section id="next" style="padding-top:40px">
+  <div class="call ok"><div class="ic">→</div><div class="bd">
+    <div class="t">Next: slice 1.4 — K3s server on smbarkiS</div>
+    <p style="margin-bottom:0">A provisioning script in <code>p1/scripts/</code> (mandated by p17's
+      yellow box), the pre-seeded token, <code>--node-ip</code>, and the first
+      <code>kubectl get nodes</code>.</p>
+  </div></div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement, L=document.getElementById('tLight'), D=document.getElementById('tDark');
+  function paint(t){
+    root.setAttribute('data-theme',t);
+    try{localStorage.setItem('iot-theme',t)}catch(e){}
+    L.classList.toggle('on',t==='light'); D.classList.toggle('on',t==='dark');
+  }
+  var saved=null; try{saved=localStorage.getItem('iot-theme')}catch(e){}
+  paint(saved || (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+  L.onclick=function(){paint('light')}; D.onclick=function(){paint('dark')};
+
+  var bar=document.getElementById('progress');
+  function prog(){
+    var h=document.documentElement.scrollHeight-window.innerHeight;
+    bar.style.width=(h>0?(window.scrollY/h*100):0)+'%';
+  }
+  window.addEventListener('scroll',prog,{passive:true}); prog();
+
+  var links=[].slice.call(document.querySelectorAll('#nav a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))}).filter(Boolean);
+  function spy(){
+    var best=null, bestTop=-1e9;
+    secs.forEach(function(s){
+      var t=s.getBoundingClientRect().top-90;
+      if(t<=0 && t>bestTop){bestTop=t;best=s}
+    });
+    if(!best) best=secs[0];
+    links.forEach(function(a){a.classList.toggle('active', a.getAttribute('href')==='#'+best.id)});
+  }
+  window.addEventListener('scroll',spy,{passive:true}); spy();
+
+  [].forEach.call(document.querySelectorAll('.pre-wrap'),function(w){
+    var b=document.createElement('button'); b.className='copy'; b.textContent='copy';
+    b.onclick=function(){
+      var txt=w.querySelector('code').innerText;
+      navigator.clipboard.writeText(txt).then(function(){
+        b.textContent='copied'; b.classList.add('done');
+        setTimeout(function(){b.textContent='copy'; b.classList.remove('done')},1400);
+      });
+    };
+    w.appendChild(b);
+  });
+
+  var sb=document.getElementById('sidebar'), sc=document.getElementById('scrim'), mb=document.getElementById('menuBtn');
+  function close(){sb.classList.remove('open'); sc.classList.remove('open')}
+  mb.onclick=function(){sb.classList.toggle('open'); sc.classList.toggle('open')};
+  sc.onclick=close;
+  links.forEach(function(a){a.addEventListener('click',close)});
+})();
+</script>
+</body>
+</html>
