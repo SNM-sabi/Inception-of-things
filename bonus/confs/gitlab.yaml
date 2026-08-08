@@ -38,7 +38,10 @@ spec:
       terminationGracePeriodSeconds: 120
       containers:
         - name: gitlab
-          image: gitlab/gitlab-ce:latest
+          # Pinned, never :latest — a defense must be reproducible, and an
+          # upstream release landing between rehearsal and evaluation would
+          # change the thing being graded. 19.3 is due ~2026-08-20.
+          image: gitlab/gitlab-ce:19.2.1-ce.0
           env:
             - name: GITLAB_OMNIBUS_CONFIG
               value: |

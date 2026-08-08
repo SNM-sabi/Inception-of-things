@@ -12,7 +12,8 @@ CLUSTER_NAME="${CLUSTER_NAME:-iot}"
 GITLAB_HOST="gitlab.gitlab.svc.cluster.local"
 CONF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../confs" && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ARGOCD_MANIFEST="https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml"
+ARGOCD_VERSION="v3.4.6"                       # pinned — the same version p3 installs
+ARGOCD_MANIFEST="https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
 
 log()  { printf '\033[1;34m[setup]\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m[ ok  ]\033[0m %s\n' "$*"; }
@@ -48,9 +49,24 @@ done
 ok "namespaces argocd, dev and gitlab ready"
 
 # --- 3. Argo CD -------------------------------------------------------------
-log "installing Argo CD"
-kubectl apply -n argocd -f "${ARGOCD_MANIFEST}" >/dev/null
+log "installing Argo CD ${ARGOCD_VERSION}"
+# --server-side: the install manifest's CRDs exceed the 262144-byte annotation
+# limit a client-side apply would try to store in last-applied-configuration.
+kubectl apply -n argocd --server-side --force-conflicts -f "${ARGOCD_MANIFEST}" >/dev/null
+
+log "waiting for the Application CRD to be established"
+kubectl wait --for=condition=established --timeout=120s crd/applications.argoproj.io >/dev/null
+
+# Default reconciliation is 120s + up to 60s jitter — about three minutes of
+# standing in silence during the v1 -> v2 demo. The controller reads this at
+# startup, so it must be restarted for the change to take effect.
+log "shortening the reconciliation interval to 20s"
+kubectl -n argocd patch configmap argocd-cm --type merge \
+	-p '{"data":{"timeout.reconciliation":"20s"}}' >/dev/null
+kubectl -n argocd rollout restart statefulset argocd-application-controller >/dev/null
+
 kubectl wait --for=condition=available --timeout=600s deployment --all -n argocd
+kubectl -n argocd rollout status statefulset argocd-application-controller --timeout=300s >/dev/null
 ok "Argo CD is up"
 
 # --- 4. /etc/hosts ----------------------------------------------------------

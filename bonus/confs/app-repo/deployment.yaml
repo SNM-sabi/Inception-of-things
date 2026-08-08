@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: playground
-          image: wil42/playground:v1     # change to v2 in GitHub for the demo
+          image: wil42/playground:v1     # change to v2 in GitLab for the demo
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8888

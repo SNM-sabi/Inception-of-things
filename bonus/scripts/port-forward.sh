@@ -24,18 +24,15 @@ stop() {
 stop
 : > "$PID_FILE"
 
+# Only the Argo CD UI is forwarded. The UI is not graded, so a forward that dies
+# with the pod costs nothing here. The APPLICATION is deliberately NOT forwarded:
+# it is reached through the Ingress on host port 80, which survives Argo CD
+# replacing the pod during the v1 -> v2 demo.
 kubectl port-forward -n argocd svc/argocd-server 8080:443 >/dev/null 2>&1 &
 echo $! >> "$PID_FILE"
 
-if kubectl get svc -n dev playground >/dev/null 2>&1; then
-	kubectl port-forward -n dev svc/playground 8888:8888 >/dev/null 2>&1 &
-	echo $! >> "$PID_FILE"
-else
-	log "service 'playground' not in dev yet — skipping"
-fi
-
 sleep 3
-log "Argo CD UI : https://localhost:8080          (user: admin)"
+log "Argo CD UI : https://localhost:8080          (user: admin, NOT graded)"
 log "GitLab     : http://gitlab.gitlab.svc.cluster.local/   (user: root)"
-log "Application: http://localhost:8888/"
+log "Application: http://localhost/                (via ingress, no forward)"
 log "stop with  : ./scripts/port-forward.sh stop"

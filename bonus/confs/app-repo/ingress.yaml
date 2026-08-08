@@ -1,0 +1,29 @@
+---
+# This file belongs in your GITLAB PROJECT (root/iot-app), under manifests/.
+#
+# It is what makes `curl http://localhost/` work without a port-forward:
+#
+#   host :80 -> k3d load-balancer :80 -> Traefik -> this Ingress -> Service :8888
+#
+# A port-forward would die the moment Argo CD replaces the pod, which is exactly
+# the v1 -> v2 moment the evaluator is watching.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: playground
+  namespace: dev
+spec:
+  # K3s (and therefore k3d) ships Traefik and registers it as the default
+  # IngressClass. Naming it costs nothing and survives a missing default.
+  ingressClassName: traefik
+  # defaultBackend, not a host-less rule: GitLab already owns the host
+  # gitlab.gitlab.svc.cluster.local on this same port 80. A host-less rule would
+  # only lose to it by accident, because Traefik v3 orders routers by rule-string
+  # length. defaultBackend compiles to priority math.MinInt32, so GitLab's host
+  # rule always wins and everything else — including curl's plain "localhost" —
+  # falls through to the app.
+  defaultBackend:
+    service:
+      name: playground
+      port:
+        number: 8888

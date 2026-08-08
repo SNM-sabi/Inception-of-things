@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # bonus/scripts/install.sh
-# Same toolchain as p3 (docker, kubectl, k3d, argocd) plus helm,
-# which is only needed if you take the Helm route for GitLab.
+# Exactly the same toolchain as p3: docker, kubectl, k3d, argocd.
+# GitLab is plain YAML (confs/gitlab.yaml), so helm is not needed.
 #
 set -euo pipefail
 
@@ -57,13 +57,6 @@ else
 	curl -fsSL -o /tmp/argocd \
 		"https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${ARCH}"
 	sudo install -m 0755 /tmp/argocd /usr/local/bin/argocd && rm -f /tmp/argocd
-fi
-
-if command -v helm >/dev/null 2>&1; then
-	ok "helm already installed"
-else
-	log "installing helm"
-	curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | sudo bash
 fi
 
 echo

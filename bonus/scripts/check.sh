@@ -35,14 +35,12 @@ kubectl get deployment -n dev playground \
 	-o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}' 2>/dev/null \
 	|| echo "deployment not found"
 
-hdr "app response"
-if kubectl get svc -n dev playground >/dev/null 2>&1; then
-	kubectl port-forward -n dev svc/playground 8888:8888 >/dev/null 2>&1 &
-	PF=$!
-	sleep 3
-	curl -s http://localhost:8888/ || echo "no response"
-	echo
-	kill "$PF" 2>/dev/null || true
-else
-	echo "service not found in dev"
-fi
+hdr "ingress in dev"
+kubectl get ingress -n dev
+
+hdr "app response (through the ingress — no port-forward)"
+# Deliberately NOT `kubectl port-forward`: it dies the moment Argo CD replaces
+# the pod, which is precisely the v1 -> v2 moment being demonstrated. This is
+# the same path the evaluator uses: host :80 -> k3d LB -> Traefik -> Ingress.
+curl -s --max-time 10 http://localhost/ || echo "no response"
+echo
