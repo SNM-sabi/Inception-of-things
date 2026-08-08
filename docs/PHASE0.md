@@ -11,9 +11,13 @@ Where we are right now:
 | 0.1 Install the hypervisor toolchain on the laptop | ✅ done, verified |
 | Download + verify the Debian 13 cloud image | ✅ done, SHA512 matches Debian's |
 | Build the cloud-init seed ISO | ✅ done, label `cidata` verified |
-| 0.2 Create the outer VM (`sudo bash ~/iot-create-vm.sh`) | ⬅ **you are here** |
-| 0.3 Gate: `/dev/kvm` exists *inside* the VM | pending |
-| 0.4 Install Vagrant + Docker inside the VM | pending |
+| 0.2 Create the outer VM (`sudo bash ~/iot-create-vm.sh`) | ✅ done — `iot-host` at 192.168.122.182, `ssh iot-host` |
+| 0.3 Gate: `/dev/kvm` exists *inside* the VM | ✅ **PASSED** — kvm_intel loaded, vmx on all 6 vCPUs |
+| 0.4 Vagrant + vagrant-libvirt inside the VM, box pre-cached | ✅ done — Debian pkgs, `debian/trixie64` cached (867 MB) |
+| **Next: p1 slice 1.1** — the five-line Vagrantfile | ⬅ **you are here** |
+
+*(Docker inside the VM is deliberately deferred: p3's own `install.sh` must install it live
+during the defense — subject p12's yellow box — and nothing in p1/p2 needs it.)*
 
 ---
 

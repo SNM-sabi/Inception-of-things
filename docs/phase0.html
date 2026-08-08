@@ -253,10 +253,15 @@ details.q .ans > :first-child{margin-top:0}
     <li class="done"><span class="s">✅</span><span><strong>0.1</strong> Install the hypervisor toolchain on the laptop — done, verified</span></li>
     <li class="done"><span class="s">✅</span><span>Download + verify the Debian 13 cloud image — SHA512 matches Debian's published sum</span></li>
     <li class="done"><span class="s">✅</span><span>Build the cloud-init seed ISO — label <code>cidata</code> verified</span></li>
-    <li class="here"><span class="s">⬅</span><span><strong>0.2</strong> Create the outer VM — <code>sudo bash ~/iot-create-vm.sh</code> — <strong>you are here</strong></span></li>
-    <li class="todo"><span class="s">○</span><span><strong>0.3</strong> Gate: <code>/dev/kvm</code> exists <em>inside</em> the VM</span></li>
-    <li class="todo"><span class="s">○</span><span><strong>0.4</strong> Install Vagrant + Docker inside the VM, then p1 slice 1.1</span></li>
+    <li class="done"><span class="s">✅</span><span><strong>0.2</strong> Create the outer VM — <code>iot-host</code> at 192.168.122.182, reachable via <code>ssh iot-host</code></span></li>
+    <li class="done"><span class="s">✅</span><span><strong>0.3</strong> Gate <strong>PASSED</strong> — <code>/dev/kvm</code> exists inside, kvm_intel loaded, vmx on all 6 vCPUs</span></li>
+    <li class="done"><span class="s">✅</span><span><strong>0.4</strong> Vagrant 2.3.8.dev + vagrant-libvirt 0.12.2 inside (Debian packages, zero compile); <code>debian/trixie64</code> box pre-cached (867 MB)</span></li>
+    <li class="here"><span class="s">⬅</span><span><strong>Next: p1 slice 1.1</strong> — the five-line Vagrantfile — <strong>you are here</strong></span></li>
   </ul>
+  <p style="font-size:13.5px;color:var(--ink-faint)">
+    Docker inside the VM is deliberately deferred: p3's own <code>install.sh</code> must install it
+    live during the defense (subject p12's yellow box), and nothing in p1/p2 needs it.
+  </p>
 </section>
 
 <hr>
