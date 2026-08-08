@@ -1,19 +1,31 @@
+# The K3s join token is PRE-SEEDED: both machines are told which token to use,
+# instead of the worker copying the one the server would generate. No credential
+# is written into /vagrant (a live NFS mount of this repo), and nothing stale
+# survives a destroy. Not treated as a secret: it only works on 192.168.56.0/24,
+# which exists solely inside the outer VM.
+K3S_TOKEN = "smbarki-iot-p1-preseeded-token"
+
+SERVER_IP = "192.168.56.110"
+WORKER_IP = "192.168.56.111"
+
 Vagrant.configure("2") do |config|
   config.vm.box = "debian/trixie64"
 
   config.vm.define "smbarkiS" do |server|
     server.vm.hostname = "smbarkiS"
-    server.vm.network :private_network, ip: "192.168.56.110"
+    server.vm.network :private_network, ip: SERVER_IP
     server.vm.provider :libvirt do |lv|
       lv.default_prefix = ""      # domain is named smbarkiS, not p1_smbarkiS
       lv.memory = 1024            # subject p6: 512 MB or 1024 — the server gets 1024
       lv.cpus   = 1               # subject p6: 1 CPU
     end
+    server.vm.provision "shell", path: "scripts/server.sh",
+      env: { "NODE_IP" => SERVER_IP, "K3S_TOKEN" => K3S_TOKEN }
   end
 
   config.vm.define "smbarkiSW" do |worker|
     worker.vm.hostname = "smbarkiSW"
-    worker.vm.network :private_network, ip: "192.168.56.111"
+    worker.vm.network :private_network, ip: WORKER_IP
     worker.vm.provider :libvirt do |lv|
       lv.default_prefix = ""
       lv.memory = 512             # agent only — the bare minimum the subject asks for
