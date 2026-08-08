@@ -39,7 +39,15 @@ All four must hold:
 | W2 — K3d & GitOps | Person 3 | `p3/` |
 | W3 — GitLab | gated on mandatory being flawless | `bonus/` |
 
-Branch per unit (`p1p2`, `p3`, `bonus`), merge to `main` only after the gate. Units never edit each other's folders; `README.md`, `CLAUDE.md`, `.gitignore` are shared and changed on `main` by agreement. Subject p5 mandates the p1 → p2 → p3 order.
+Branch per unit (`p1p2`, `p3`, `bonus`). Units never edit each other's folders; `README.md`, `CLAUDE.md`, `.gitignore` are shared and changed on `main` by agreement. Subject p5 mandates the p1 → p2 → p3 order.
+
+**Deviation, 2026-08-08 — `p3/` and `bonus/` are already merged into `main`.** The rule above said "merge to `main` only after the gate", and that is not what happened: W2 consolidated both into one working tree and pushed to `main` at `7514e3a` before p3's gate passed. Recorded here so the repo and this file agree.
+
+What that means for anyone reading `main` today:
+- `p3/` is verified only up to the point where its GitOps repo is needed — cluster, the 8888 port map, Argo CD v3.4.6, both namespaces, the 20s reconciliation patch. **The v1 → v2 loop, which is the graded demo, has never run.**
+- `p3/confs/application.yaml` still carries `repoURL: …/CHANGE_ME/CHANGE_ME.git`. A fresh clone cannot sync until that is filled in with the public GitOps repo.
+- `bonus/` has never been executed at all. It is committed, syntax-checked and schema-validated, nothing more.
+- The bonus is still scored only if the mandatory part is flawless, so its presence on `main` does not put it in scope — p1 and p2 remain empty skeletons.
 
 ## Non-negotiable values (graded literally)
 
@@ -148,10 +156,18 @@ kubectl port-forward -n argocd svc/argocd-server 8080:443      # UI only; NOT th
 p12's yellow box requires `p3/scripts/` to install **everything** from scratch, live, on a clean machine.
 
 ### Bonus — GitLab
+No Helm and no chart directory: `bonus/confs/gitlab.yaml` is plain YAML running the
+Omnibus image, as the trap note below requires. `setup.sh` publishes host ports 80
+(GitLab, whose `external_url` carries no port) **and** 8888, so p3's own
+`curl http://localhost:8888/` keeps working — subject p16: *"Everything you did in
+Part 3 must work with your local Gitlab."*
 ```bash
-kubectl create namespace gitlab
-helm upgrade --install gitlab ./bonus/confs/chart -n gitlab    # gitlab/gitlab-ce:19.2.1-ce.0
+bash bonus/scripts/install.sh     # docker, kubectl, k3d, argocd — no helm
+bash bonus/scripts/setup.sh       # cluster + argocd/dev/gitlab + Argo CD v3.4.6 + GitLab
+bash bonus/scripts/check.sh       # state dump for the defense
 ```
+The bonus cluster is also named `iot` and also claims 8888, so **destroy p3's cluster
+first** (`bash p3/scripts/reset.sh`). k3d port maps are fixed at create time.
 
 ## Verification — this project's "tests"
 
