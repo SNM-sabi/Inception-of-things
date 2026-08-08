@@ -15,7 +15,7 @@ spec:
   source:
     # Public GitHub repo whose name contains a group member's login (subject p12).
     # Override at apply time with:  REPO_URL=... bash p3/scripts/create_cluster.sh
-    repoURL: https://github.com/CHANGE_ME/CHANGE_ME.git
+    repoURL: https://github.com/KamenHero/-smbarki-iot-gitops.git
     targetRevision: HEAD
     # A folder, never a single file: Argo CD globs *.yaml, and pointing at the
     # repo root would sweep in README.md and produce a noisy manifest set.
