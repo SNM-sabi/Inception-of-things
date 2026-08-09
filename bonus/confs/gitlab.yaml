@@ -50,6 +50,15 @@ spec:
                 external_url 'http://gitlab.gitlab.svc.cluster.local'
                 gitlab_rails['initial_root_password'] = 'Passw0rd!42'
                 gitlab_rails['gitlab_shell_ssh_port'] = 22
+                # /-/health, /-/readiness and /-/liveness are IP-restricted and
+                # answer 404 — not 403 — to any source outside this list. The
+                # kubelet probes arrive from the CNI gateway (10.42.0.1), not
+                # from loopback, so the default ['127.0.0.0/8'] makes every
+                # probe fail forever: the pod never goes Ready and the
+                # startupProbe kills the container every 30 minutes, restarting
+                # `gitlab-ctl reconfigure` from zero. Throwaway cluster, so the
+                # allowlist is fully open.
+                gitlab_rails['monitoring_whitelist'] = ['0.0.0.0/0']
                 # trim everything we do not need, to save RAM
                 registry['enable'] = false
                 gitlab_kas['enable'] = false

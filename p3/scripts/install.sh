@@ -76,15 +76,12 @@ fi
 # "Skip if the binary exists" silently keeps whatever an earlier, unpinned
 # script left behind — which is exactly how an unpinned argocd CLI ended up
 # installed here while CLAUDE.md pinned a different one.
-K3D_CURRENT="$(k3d version 2>/dev/null | awk '/^k3d version/ {print $3; exit}')"
-if [ "${K3D_CURRENT}" = "${K3D_VERSION}" ]; then
-	ok "k3d ${K3D_VERSION} already installed"
-else
-	[ -n "${K3D_CURRENT}" ] && log "k3d ${K3D_CURRENT} found, replacing with pinned ${K3D_VERSION}"
-	log "installing k3d ${K3D_VERSION}"
-	curl -fsSL https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh \
-		| sudo TAG="${K3D_VERSION}" bash
-	ok "k3d ${K3D_VERSION} installed"
+
+	# echo "ssss"
+# echo "==> [4/6] k3d"
+echo "==> k3d"
+if ! command -v k3d >/dev/null 2>&1; then
+  curl -fsSL https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | sudo env PATH="/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin" bash
 fi
 
 # --- Argo CD CLI ------------------------------------------------------------
