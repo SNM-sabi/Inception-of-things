@@ -42,4 +42,27 @@ done
 echo "==> waiting for Traefik to answer on :80 ..."
 until curl -s -o /dev/null "http://$NODE_IP"; do sleep 3; done
 echo "==> Traefik is serving on $NODE_IP:80"
-/usr/local/bin/kubectl get pods -A
+
+# --- 5. Deploy the three applications and the routing table ------------------
+# Manifests live in confs/ (p17 yellow box) and reach the guest through the
+# /vagrant synced folder. Applying them here means one cold `vagrant up`
+# produces the complete serving stack with zero manual steps.
+/usr/local/bin/kubectl apply -f /vagrant/confs/apps.yaml -f /vagrant/confs/ingress.yaml
+for app in app-one app-two app-three; do
+  /usr/local/bin/kubectl wait deploy/"$app" --for=condition=Available --timeout=180s
+done
+
+# --- 6. Self-check the full routing table before declaring success ----------
+# Same four cases the evaluator will run (subject p9), via the node's own :80.
+check() { # host-header expected-name
+  local got
+  got=$(curl -s ${1:+-H "Host: $1"} "http://$NODE_IP" | awk '/^Name:/{print $2; exit}')
+  [ "$got" = "$2" ] || { echo "ROUTING SELF-CHECK FAILED: host='$1' expected $2 got '$got'" >&2; exit 1; }
+  echo "==> routing OK: host='${1:-<none>}' -> $2"
+}
+check app1.com     app1
+check app2.com     app2
+check ""           app3
+check nonsense.com app3
+/usr/local/bin/kubectl get all
+echo "==> p2 stack complete and serving"
