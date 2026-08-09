@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Defense runbook — how to present p1 and p2 — Inception-of-Things</title>
+<style>
+:root{
+  --bg:#fbfbfd; --panel:#ffffff; --ink:#1a1d23; --ink-soft:#5b6270; --ink-faint:#8b93a1;
+  --line:#e5e7ec; --line-soft:#eef0f4;
+  --accent:#4f46e5; --accent-soft:#eef0ff; --accent-ink:#3730a3;
+  --ok:#0f8a5f; --ok-soft:#e7f6ef;
+  --warn:#b45309; --warn-soft:#fdf3e3;
+  --danger:#c0392f; --danger-soft:#fdeeec;
+  --code-bg:#f4f5f8; --code-ink:#1f2430;
+  --shadow:0 1px 2px rgba(16,20,30,.04), 0 8px 24px rgba(16,20,30,.06);
+  --radius:12px;
+  --sidebar:280px;
+}
+html[data-theme="dark"]{
+  --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+  --line:#252932; --line-soft:#1d212a;
+  --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+  --ok:#4ade9c; --ok-soft:#12251d;
+  --warn:#e0a33c; --warn-soft:#2a2113;
+  --danger:#f0796c; --danger-soft:#2b1614;
+  --code-bg:#1a1e26; --code-ink:#dfe3ea;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+@media (prefers-color-scheme: dark){
+  html:not([data-theme="light"]){
+    --bg:#0e1014; --panel:#15181e; --ink:#e7e9ee; --ink-soft:#a3aab8; --ink-faint:#727a8a;
+    --line:#252932; --line-soft:#1d212a;
+    --accent:#8b8cf7; --accent-soft:#1e1f36; --accent-ink:#b9baff;
+    --ok:#4ade9c; --ok-soft:#12251d;
+    --warn:#e0a33c; --warn-soft:#2a2113;
+    --danger:#f0796c; --danger-soft:#2b1614;
+    --code-bg:#1a1e26; --code-ink:#dfe3ea;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:24px}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+code,kbd,pre{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--accent);z-index:100;transition:width .1s linear}
+.wrap{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;max-width:1320px;margin:0 auto}
+aside{
+  position:sticky;top:0;height:100vh;overflow-y:auto;padding:28px 20px 40px;
+  border-right:1px solid var(--line);background:var(--bg);
+}
+aside .brand{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;margin-bottom:4px}
+aside .brand-sub{font-size:15px;font-weight:650;line-height:1.35;margin-bottom:20px}
+nav a{
+  display:flex;gap:10px;align-items:baseline;padding:7px 10px;margin:1px 0;border-radius:8px;
+  color:var(--ink-soft);text-decoration:none;font-size:14px;line-height:1.4;
+  border-left:2px solid transparent;
+}
+nav a .n{color:var(--ink-faint);font-size:12px;font-variant-numeric:tabular-nums;min-width:14px}
+nav a:hover{background:var(--line-soft);color:var(--ink)}
+nav a.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;border-left-color:var(--accent)}
+nav a.active .n{color:var(--accent-ink)}
+.sidebar-foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-faint)}
+.sidebar-foot a{color:var(--ink-soft)}
+main{padding:56px 56px 120px;min-width:0;max-width:880px}
+.eyebrow{display:inline-block;font-size:12px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent-ink);background:var(--accent-soft);padding:5px 11px;border-radius:99px;margin-bottom:18px}
+h1{font-size:clamp(30px,4.4vw,42px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em;font-weight:720}
+.lede{font-size:18px;line-height:1.65;color:var(--ink-soft);margin:0 0 10px}
+.meta{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink-faint);margin-top:22px;
+  padding-top:18px;border-top:1px solid var(--line)}
+section{padding-top:52px;scroll-margin-top:20px}
+h2{font-size:25px;line-height:1.25;margin:0 0 6px;letter-spacing:-.015em;font-weight:680;display:flex;gap:12px;align-items:baseline}
+h2 .num{font-size:14px;color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;
+  background:var(--accent-soft);padding:3px 9px;border-radius:7px;line-height:1.4}
+h3{font-size:17px;margin:30px 0 8px;font-weight:660;letter-spacing:-.005em}
+p{margin:12px 0}
+ul,ol{margin:12px 0;padding-left:22px}
+li{margin:6px 0}
+strong{font-weight:660}
+a{color:var(--accent-ink)}
+hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+p code, li code, td code, th code, h3 code, blockquote code{
+  background:var(--code-bg);color:var(--code-ink);padding:2px 6px;border-radius:5px;font-size:.875em;
+  border:1px solid var(--line-soft);
+}
+blockquote{margin:14px 0;padding:12px 18px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:0 var(--radius) var(--radius) 0;color:var(--ink);font-style:italic}
+pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;border-radius:var(--radius);
+  overflow-x:auto;font-size:13.5px;line-height:1.65;border:1px solid var(--line);margin:16px 0}
+pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
+.pre-wrap{position:relative}
+.copy{position:absolute;top:9px;right:9px;font:inherit;font-size:11.5px;font-weight:600;
+  padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);
+  cursor:pointer;opacity:0;transition:opacity .12s}
+.pre-wrap:hover .copy{opacity:1}
+.copy:hover{color:var(--ink);border-color:var(--ink-faint)}
+.copy.done{color:var(--ok);border-color:var(--ok)}
+.tbl{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{text-align:left;font-weight:650;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-faint);padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+td{padding:12px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.6}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--line-soft)}
+.call{display:grid;grid-template-columns:auto 1fr;gap:12px;margin:20px 0;padding:14px 16px;
+  border-radius:var(--radius);border:1px solid var(--line);background:var(--panel)}
+.call .ic{font-size:16px;line-height:1.5}
+.call .bd{min-width:0}
+.call .bd > :first-child{margin-top:0}
+.call .bd > :last-child{margin-bottom:0}
+.call .t{font-weight:660;font-size:14px;margin-bottom:2px}
+.call.info{background:var(--accent-soft);border-color:transparent}
+.call.info .t{color:var(--accent-ink)}
+.call.warn{background:var(--warn-soft);border-color:transparent}
+.call.warn .t{color:var(--warn)}
+.call.danger{background:var(--danger-soft);border-color:transparent}
+.call.danger .t{color:var(--danger)}
+.call.ok{background:var(--ok-soft);border-color:transparent}
+.call.ok .t{color:var(--ok)}
+.checklist{list-style:none;padding:0;margin:16px 0}
+.checklist li{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:10px 14px;margin:6px 0;
+  border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:14.5px}
+.checklist li::before{content:"☐";color:var(--accent);font-size:16px;font-weight:700}
+.toggle{position:fixed;top:18px;right:20px;z-index:90;display:flex;gap:6px;
+  background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:4px;box-shadow:var(--shadow)}
+.toggle button{border:0;background:none;cursor:pointer;font:inherit;font-size:14px;line-height:1;
+  padding:7px 10px;border-radius:99px;color:var(--ink-faint)}
+.toggle button.on{background:var(--accent-soft);color:var(--accent-ink)}
+.menu-btn{display:none}
+@media (max-width:1000px){
+  .wrap{grid-template-columns:1fr}
+  aside{position:fixed;inset:0 auto 0 0;width:290px;z-index:80;transform:translateX(-100%);
+    transition:transform .2s ease;box-shadow:var(--shadow);background:var(--panel)}
+  aside.open{transform:none}
+  main{padding:76px 22px 100px}
+  .menu-btn{display:grid;place-items:center;position:fixed;top:18px;left:18px;z-index:90;
+    width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);cursor:pointer;font-size:17px;box-shadow:var(--shadow)}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:79;display:none}
+  .scrim.open{display:block}
+}
+@media print{
+  aside,.toggle,.menu-btn,#progress,.copy{display:none}
+  .wrap{grid-template-columns:1fr}
+  main{padding:0;max-width:100%}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
+<div class="scrim" id="scrim"></div>
+<div class="toggle" role="group" aria-label="Colour theme">
+  <button id="tLight" title="Light">☀</button>
+  <button id="tDark" title="Dark">☾</button>
+</div>
+
+<div class="wrap">
+
+<aside id="sidebar">
+  <div class="brand">Inception-of-Things</div>
+  <div class="brand-sub">Defense runbook —<br>how to present p1 &amp; p2</div>
+  <nav id="nav">
+    <a href="#s0"><span class="n">0</span><span>Pre-flight</span></a>
+    <a href="#s1"><span class="n">1</span><span>The opening (60 s)</span></a>
+    <a href="#s2"><span class="n">2</span><span>Part 1 — the script</span></a>
+    <a href="#s3"><span class="n">3</span><span>Part 2 — the script</span></a>
+    <a href="#s4"><span class="n">4</span><span>Question bank</span></a>
+    <a href="#s5"><span class="n">5</span><span>Emergency card</span></a>
+    <a href="#s6"><span class="n">6</span><span>What NOT to do</span></a>
+    <a href="#s7"><span class="n">7</span><span>Rehearsal checklist</span></a>
+  </nav>
+  <div class="sidebar-foot">
+    Part of the series:<br>
+    <a href="index.html">1 · Step One from zero</a><br>
+    <a href="phase0.html">2 · Phase 0 in practice</a><br>
+    <a href="p1.html">3 · Part 1: the two machines</a><br>
+    <a href="p2.html">4 · Part 2: three apps, one door</a><br>
+    <strong>5 · Defense runbook</strong><br><br>
+    Source: <a href="DEFENSE.md">DEFENSE.md</a><br>
+    Plan: <a href="../PLAN.md">PLAN.md</a> · Rules: <a href="../CLAUDE.md">CLAUDE.md</a>
+  </div>
+</aside>
+
+<main>
+
+<span class="eyebrow">The script for the day</span>
+<h1>Defense runbook — how to present p1 and p2</h1>
+<p class="lede">
+  The other pages teach concepts; this one is <strong>the script</strong>: the order, the
+  commands, what to say while things boot, the questions that are coming, and what to do when
+  something breaks. Evaluation happens on OUR machine (p17), driven by you.
+</p>
+<div class="meta">
+  <span>p1 builds in ~3 min · p2 in ~10 min</span><span>·</span>
+  <span><strong>Something is always building while you are always explaining</strong></span>
+</div>
+
+<!-- 0 -->
+<section id="s0">
+  <h2><span class="num">0</span> Pre-flight — before the evaluator sits down</h2>
+  <p>Run these yourself, alone, that morning:</p>
+  <div class="pre-wrap"><pre><code>ssh iot-host                                  # the outer VM is up (it autostarts)
+cd Inception-of-things && git pull            # repo inside matches main
+cd p1 && vagrant destroy -f; cd ../p2 && vagrant destroy -f
+virsh list --all                              # MUST be empty — no stale domains
+vagrant box list                              # debian/trixie64 cached (no download mid-demo)
+free -h                                       # iot-host has its ~5 GB free</code></pre></div>
+  <p>
+    On the laptop: close heavy apps (the desktop eats RAM the VMs need), and have
+    <code>docs/</code> open in a browser tab — organized docs never hurt.
+  </p>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <div class="t">Arrive with everything DOWN</div>
+    <p>The clean build from zero <em>is</em> the demo. A pre-booted cluster invites "how do I know
+       you didn't hand-fix this?" — a cold <code>vagrant up</code> answers it before it's asked.</p>
+  </div></div>
+</section>
+
+<hr>
+
+<!-- 1 -->
+<section id="s1">
+  <h2><span class="num">1</span> The opening — 60 seconds, before any command</h2>
+  <blockquote>"The whole project runs inside a virtual machine, as page 4 requires — this laptop
+    hosts one big VM, <code>iot-host</code>, and everything you'll see runs inside it. Vagrant works
+    there with the libvirt provider — page 4's blue box allows any provider. Part 1 is a two-node
+    K3s cluster on two Vagrant VMs; Part 2 is one VM serving three apps behind one Ingress; Part 3
+    is K3d and Argo CD, no Vagrant. I'll build each part from zero in front of you."</blockquote>
+  <p>
+    Why this order of ideas: it plants the three subject citations for the outer VM (p4 ×2, p12)
+    before the evaluator can ask "why nested VMs?", and it sets the expectation that builds happen
+    live.
+  </p>
+</section>
+
+<hr>
+
+<!-- 2 -->
+<section id="s2">
+  <h2><span class="num">2</span> Part 1 — the script</h2>
+
+  <h3>2.1 Launch first, talk second</h3>
+  <div class="pre-wrap"><pre><code>ssh iot-host
+cd Inception-of-things/p1
+vagrant destroy -f && vagrant up        # ~3 min — the talking window opens now</code></pre></div>
+
+  <h3>2.2 While it builds — walk the Vagrantfile (open in a second terminal)</h3>
+  <ul>
+    <li><strong>Shape</strong>: "one <code>config.vm.box</code> at the top, one <code>define</code>
+      block per machine — the structure page 7 of the subject itself shows."</li>
+    <li><strong>Names</strong>: "machine name, hostname and libvirt domain are all
+      <code>smbarkiS</code> — login <code>smbarki</code> + S, as page 6 demands. Same with SW for
+      the worker."</li>
+    <li><strong>IPs</strong>: "static <code>.110</code>/<code>.111</code> on a private network — the
+      dedicated IPs from page 6. NIC 1 belongs to Vagrant on any provider — that's how
+      <code>vagrant ssh</code> works — so the dedicated IP lives on the second interface, which is
+      why page 8's info box points at <code>enp0s8/enp0s9</code>, the <em>second and third</em>
+      adapters."</li>
+    <li><strong>Resources</strong>: "1 CPU each; worker at the 512 minimum, server at the allowed
+      1024 — the parenthesis in '512 MB (or 1024)' is the permission. The server runs the whole
+      control plane; 512 would OOM."</li>
+    <li><strong>The token</strong>: "pre-seeded: I tell both machines which token to use, instead of
+      the worker fishing the generated one out of the server's filesystem. Copying it through
+      <code>/vagrant</code> would drop a live credential into the git repo — it's a live NFS mount
+      of the project — and a stale copy survives destroy and breaks the next join. I inverted the
+      dependency."</li>
+    <li><strong>The scripts</strong>: "provisioning lives in <code>scripts/</code>, page 17's yellow
+      box. <code>server.sh</code>: detect the interface carrying <code>.110</code> at runtime — page
+      8 says never hardcode names — then K3s pinned, server mode, <code>--node-ip</code>.
+      <code>worker.sh</code>: same token, agent mode, and it <em>waits</em> for the server's API,
+      because this provider provisions machines in parallel."</li>
+    <li><strong>If asked about <code>--disable</code></strong>: "K3s bundles Traefik, a load
+      balancer, metrics-server and a storage provisioner. Part 1 needs none — the bare minimum the
+      subject advises, applied to software. Part 2 re-enables exactly what it uses."</li>
+  </ul>
+
+  <h3>2.3 The proofs</h3>
+  <div class="pre-wrap"><pre><code>vagrant ssh smbarkiS -c "kubectl get nodes -o wide"</code></pre></div>
+  <p>
+    Narrate the columns: <strong>two Ready</strong> · <code>smbarkis</code>/<code>smbarkisw</code> —
+    "node names are RFC-1123 DNS labels, so Kubernetes lowercases them; the hostname is still
+    capital-S, watch:" —
+  </p>
+  <div class="pre-wrap"><pre><code>vagrant ssh smbarkiS -c "hostname"        # smbarkiS, capital S, on demand</code></pre></div>
+  <p>
+    · INTERNAL-IPs <code>.110</code>/<code>.111</code> — "that's <code>--node-ip</code>; without it
+    they'd register with Vagrant's DHCP plumbing" · ROLES <code>control-plane</code> and
+    <code>&lt;none&gt;</code> — "the legacy <code>master</code> label was removed upstream."
+  </p>
+  <div class="pre-wrap"><pre><code>vagrant ssh smbarkiS -c "ls -l /usr/local/bin/kubectl"   # -> k3s: p6 yellow box, by the installer
+vagrant ssh smbarkiSW -c "systemctl is-active k3s-agent" # agent mode, alive
+ping -c1 192.168.56.110 && ping -c1 192.168.56.111       # reachable from the host</code></pre></div>
+
+  <h3>2.4 Close p1, open p2 — say the sentence before they find the trap</h3>
+  <div class="pre-wrap"><pre><code>vagrant destroy -f          # in p1/</code></pre></div>
+  <blockquote>"p1 and p2 both name their domain <code>smbarkiS</code> — matching the subject's
+    provider-level naming — so they're mutually exclusive by design; I destroy one before booting
+    the other."</blockquote>
+</section>
+
+<hr>
+
+<!-- 3 -->
+<section id="s3">
+  <h2><span class="num">3</span> Part 2 — the script</h2>
+
+  <h3>3.1 Launch, then use the long build</h3>
+  <div class="pre-wrap"><pre><code>cd ../p2 && vagrant up      # ~10 min cold — say why up front:</code></pre></div>
+  <blockquote>"This takes about ten minutes cold: the K3s binary and the container images are
+    pulled fresh — nothing is pre-staged except the Vagrant box. The build is fully self-checking:
+    it will refuse to finish unless all four routing cases already work."</blockquote>
+
+  <h3>3.2 While it builds — walk the three files</h3>
+  <p><strong><code>confs/apps.yaml</code></strong> — "three Deployments and three ClusterIP Services
+    in the default namespace — page 11's <code>kubectl get all</code> has no <code>-n</code>, so
+    that's where your command will look. One pinned image for all three,
+    <code>traefik/whoami</code>: a tiny server that answers with its own pod name — that's how I
+    <em>prove</em> things instead of claiming them. <code>replicas: 3</code> on app-two is the blue
+    box on page 9, one line."</p>
+  <p><strong><code>confs/ingress.yaml</code></strong> — the centerpiece (p11's red box: shown and
+    explained live):</p>
+  <ul>
+    <li>"Standard <code>networking.k8s.io/v1</code>, class <code>traefik</code> — the controller K3s
+      ships; no second controller installed."</li>
+    <li>"Two objects, and the split is Traefik's requirement, which I verified live: Traefik v3.7
+      <strong>ignores</strong> <code>defaultBackend</code> when the same Ingress also carries
+      rules — I watched the API object show the default while the route 404'd. Rules in
+      <code>apps</code>, the default alone in <code>apps-default</code>."</li>
+    <li>"Why <code>defaultBackend</code> instead of a host-less rule? A host-less rule only loses by
+      an accident of Traefik's rule-length sorting. <code>defaultBackend</code> compiles to a
+      priority that cannot be outranked — it <em>means</em> 'when nothing else matches', the
+      subject's own word: <em>otherwise… by default</em>."</li>
+  </ul>
+  <p><strong><code>scripts/server.sh</code></strong> — "same skeleton as p1's, three deliberate
+    differences: no token (no worker), Traefik and ServiceLB on (they <em>are</em> the routing), and
+    success is defined as the router serving — the script curls all four cases itself before it
+    exits."</p>
+
+  <h3>3.3 The proofs — all from the iot-host shell</h3>
+  <p>"<strong>The host</strong> in the subject's sense is this VM; the <code>192.168.56</code>
+    network exists only inside it."</p>
+  <div class="pre-wrap"><pre><code>curl -H "Host: app1.com" http://192.168.56.110        # Name: app1
+curl -H "Host: app2.com" http://192.168.56.110        # Name: app2
+curl http://192.168.56.110                            # Name: app3  ← "otherwise"
+curl -H "Host: whatever.xyz" http://192.168.56.110    # Name: app3  ← still "otherwise"
+
+# the replica proof — 9 requests, count the pod names:
+for i in $(seq 9); do curl -s -H "Host: app2.com" http://192.168.56.110 | grep "^Hostname:"; done | sort | uniq -c</code></pre></div>
+  <p>Then the red-box moment — show and narrate:</p>
+  <div class="pre-wrap"><pre><code>vagrant ssh smbarkiS -c "kubectl get all"              # the exact p11 screenshot shape
+vagrant ssh smbarkiS -c "kubectl describe ingress"     # both objects, one screen</code></pre></div>
+  <blockquote>"Two rules — app1.com and app2.com, each to its Service; app2's Service fronts three
+    endpoints, which you just saw rotate. And the separate default object sends everything else to
+    app-three."</blockquote>
+</section>
+
+<hr>
+
+<!-- 4 -->
+<section id="s4">
+  <h2><span class="num">4</span> The question bank — answers you already own</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Question</th><th>The answer (one breath)</th></tr></thead>
+    <tbody>
+      <tr><td>Why is everything inside a VM?</td><td>p4: "the whole project has to be done in a virtual machine" — plus p4's blue box says "host virtual machine", and p12 says install K3d "on your virtual machine" with no Vagrant in sight. Three citations, one outer VM.</td></tr>
+      <tr><td>Why libvirt, not VirtualBox?</td><td>The subject allows any provider (p4 blue box). Technically: VirtualBox can't nest reliably inside KVM, and its kernel modules lag new kernels.</td></tr>
+      <tr><td>K3s vs K3d?</td><td>K3s is a lightweight Kubernetes distribution — one binary on the machine. K3d runs <em>K3s inside Docker containers</em> — each "node" is a container. p1/p2 use K3s in VMs; p3 uses K3d, hence no Vagrant.</td></tr>
+      <tr><td>How does the worker get the token?</td><td>It doesn't "get" it — both machines are <em>given</em> the same pre-seeded token by the Vagrantfile. Nothing copied, nothing in the repo, nothing stale after destroy.</td></tr>
+      <tr><td>Why lowercase in <code>get nodes</code>?</td><td>Node names are RFC-1123 DNS labels; uppercase is forbidden. The hostname itself is <code>smbarkiS</code> — <code>hostname</code> proves it.</td></tr>
+      <tr><td>Why no <code>master</code> in ROLES?</td><td>Removed upstream; modern K3s applies only <code>control-plane</code>. Same node, the alias is gone.</td></tr>
+      <tr><td>"Dedicated IP on the <em>primary</em> interface"?</td><td>Vagrant owns NIC 1 on every provider — the subject's own p8 box points at enp0s8/enp0s9, the <em>second and third</em> adapters. Primary = the interface the cluster uses; <code>--node-ip</code> makes it explicit.</td></tr>
+      <tr><td>Where's Traefik in p1?</td><td>Disabled deliberately: p1 needs no ingress, LB, metrics or storage — "bare minimum" applied to software. p2 re-enables what it uses.</td></tr>
+      <tr><td>Why two Ingress objects?</td><td>Traefik v3.7 ignores <code>defaultBackend</code> when rules coexist in the object — verified live. Rules in one, default in the other; only one may declare a default.</td></tr>
+      <tr><td>Prove the replicas load-balance.</td><td>The 9-curl loop: three pod names, three hits each.</td></tr>
+      <tr><td>What listens on port 80?</td><td>K3s's ServiceLB, holding the hostPort for Traefik's LoadBalancer Service. Nothing else may claim 80/443.</td></tr>
+      <tr><td>Is 1024 MB enough?</td><td>The subject's "(or 1024)". p2 idles at ~86 MB free with the full stack — thin but stable: nothing further ever loads this machine.</td></tr>
+      <tr><td>Why 990/475 MB, not 1024/512?</td><td>The kernel reserves a slice for itself; MemTotal is what remains. Correct values.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<hr>
+
+<!-- 5 -->
+<section id="s5">
+  <h2><span class="num">5</span> If something breaks — the emergency card</h2>
+  <div class="call warn"><div class="ic">⚠</div><div class="bd">
+    <div class="t">Rule one: narrate, don't panic. Rule two: rebuild, never hand-fix and pretend.</div>
+    <p>You have already diagnosed worse than anything likely to happen. Three to ten minutes of
+       rebuild is affordable; a caught lie is not.</p>
+  </div></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Symptom</th><th>Move</th></tr></thead>
+    <tbody>
+      <tr><td><code>vagrant up</code>: domain already exists</td>
+          <td><code>virsh list --all</code>; <code>vagrant destroy -f</code> in the <em>other</em> part's folder (or <code>virsh destroy</code> + <code>undefine</code>)</td></tr>
+      <tr><td>Vagrant lock held by another process</td>
+          <td><code>pgrep -af ruby</code> → kill the stale PID → retry</td></tr>
+      <tr><td>A curl times out</td>
+          <td>Check the server first, not the network: <code>vagrant ssh smbarkiS -c "uptime; free -m"</code> — you know what thrash looks like</td></tr>
+      <tr><td>Agent loops "waiting to retrieve agent configuration"</td>
+          <td>Same move: server health first. That exact symptom was the p1 crisis.</td></tr>
+      <tr><td>Traefik 404 on a host that should route</td>
+          <td><code>kubectl get ingress</code>; give Traefik ~5 s; then <code>describe ingress</code> and read it aloud — the diagnosis <em>is</em> a demonstration of competence</td></tr>
+      <tr><td>Unrecoverable mid-demo</td>
+          <td>Say so, <code>vagrant destroy -f && vagrant up</code>, keep talking through the files while it rebuilds — build time is presentation time by design</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<hr>
+
+<!-- 6 -->
+<section id="s6">
+  <h2><span class="num">6</span> What NOT to do</h2>
+  <ul>
+    <li>Don't type commands you haven't rehearsed — everything needed is in this runbook and <code>iot-verify</code>.</li>
+    <li>Don't <code>kubectl edit</code>/<code>set image</code>/hand-patch live. Git is the truth; rebuilds are cheap.</li>
+    <li>Don't guess at a question. "Let me show you" + a command beats an improvised theory — every §4 answer has a command behind it.</li>
+    <li>Don't start the bonus conversation. It's evaluated only if the mandatory part is flawless (p16 red box) — let the mandatory part finish flawlessly first.</li>
+  </ul>
+</section>
+
+<hr>
+
+<!-- 7 -->
+<section id="s7">
+  <h2><span class="num">7</span> Rehearsal checklist — at least once before the real thing</h2>
+  <ul class="checklist">
+    <li><span>Full run of §2 + §3 solo, out loud, with a timer — target under 25 min including talk</span></li>
+    <li><span><code>/iot-defense p1</code> and <code>/iot-defense p2</code> — the mock evaluator drill</span></li>
+    <li><span>Every §4 answer spoken from memory, not read</span></li>
+    <li><span>Once with sabotage: someone pre-creates a stale domain, then you start — §5 should feel boring</span></li>
+    <li><span>The day before: re-check version pins (K3s stable channel, Argo CD) — pins move</span></li>
+  </ul>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement, L=document.getElementById('tLight'), D=document.getElementById('tDark');
+  function paint(t){
+    root.setAttribute('data-theme',t);
+    try{localStorage.setItem('iot-theme',t)}catch(e){}
+    L.classList.toggle('on',t==='light'); D.classList.toggle('on',t==='dark');
+  }
+  var saved=null; try{saved=localStorage.getItem('iot-theme')}catch(e){}
+  paint(saved || (window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+  L.onclick=function(){paint('light')}; D.onclick=function(){paint('dark')};
+  var bar=document.getElementById('progress');
+  function prog(){
+    var h=document.documentElement.scrollHeight-window.innerHeight;
+    bar.style.width=(h>0?(window.scrollY/h*100):0)+'%';
+  }
+  window.addEventListener('scroll',prog,{passive:true}); prog();
+  var links=[].slice.call(document.querySelectorAll('#nav a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'))}).filter(Boolean);
+  function spy(){
+    var best=null, bestTop=-1e9;
+    secs.forEach(function(s){
+      var t=s.getBoundingClientRect().top-90;
+      if(t<=0 && t>bestTop){bestTop=t;best=s}
+    });
+    if(!best) best=secs[0];
+    links.forEach(function(a){a.classList.toggle('active', a.getAttribute('href')==='#'+best.id)});
+  }
+  window.addEventListener('scroll',spy,{passive:true}); spy();
+  [].forEach.call(document.querySelectorAll('.pre-wrap'),function(w){
+    var b=document.createElement('button'); b.className='copy'; b.textContent='copy';
+    b.onclick=function(){
+      var txt=w.querySelector('code').innerText;
+      navigator.clipboard.writeText(txt).then(function(){
+        b.textContent='copied'; b.classList.add('done');
+        setTimeout(function(){b.textContent='copy'; b.classList.remove('done')},1400);
+      });
+    };
+    w.appendChild(b);
+  });
+  var sb=document.getElementById('sidebar'), sc=document.getElementById('scrim'), mb=document.getElementById('menuBtn');
+  function close(){sb.classList.remove('open'); sc.classList.remove('open')}
+  mb.onclick=function(){sb.classList.toggle('open'); sc.classList.toggle('open')};
+  sc.onclick=close;
+  links.forEach(function(a){a.addEventListener('click',close)});
+})();
+</script>
+</body>
+</html>

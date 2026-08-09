@@ -14,6 +14,7 @@
   - **`docs/phase0.html`** ([PHASE0.md](docs/PHASE0.md)) — Phase 0 in practice: cloud images, cloud-init, the virt-install command flag by flag, the three network layers, and the traps research caught.
   - **`docs/p1.html`** ([P1.md](docs/P1.md)) — Part 1 as built: the two-machine Vagrantfile explained, the command cheat sheet, the observed network map, and the eth0 lesson that justifies `--node-ip`.
   - **`docs/p2.html`** ([P2.md](docs/P2.md)) — Part 2 concepts before code: Deployments, Services, Ingress, the Host header, and how a curl reaches a pod.
+  - **`docs/defense.html`** ([DEFENSE.md](docs/DEFENSE.md)) — **the presentation runbook**: the script for defense day, command by command, with the question bank and the emergency card.
 - **[PLAN.md](PLAN.md)** — the build plan: work split, per-part method, every decision and its justification from the subject.
 - **[CLAUDE.md](CLAUDE.md)** — working rules, graded literals, commands, and the traps.
 - `en.subject.pdf` — the subject. It is the source of truth for grading.
