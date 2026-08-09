@@ -206,7 +206,7 @@ details.q .ans > :first-child{margin-top:0}
 
 <main>
 
-<span class="eyebrow">Part 2 · concepts before code</span>
+<span class="eyebrow">Part 2 · COMPLETE · gate passed</span>
 <h1>Three apps, one door, explained from zero</h1>
 <p class="lede">
   Part 1 built a cluster; <strong>Part 2 makes it serve web traffic.</strong> New Kubernetes
@@ -227,7 +227,7 @@ details.q .ans > :first-child{margin-top:0}
     <li class="done"><span class="s">✅</span><span><strong>2.3</strong> First Ingress rule — <code>app1.com</code> routes from iot-host; controls 404</span></li>
     <li class="done"><span class="s">✅</span><span><strong>2.4</strong> app2 × 3 replicas — 9 curls → <strong>3/3/3</strong> across three pod names</span></li>
     <li class="done"><span class="s">✅</span><span><strong>2.5</strong> app3 as default — after one real Traefik surprise (§4)</span></li>
-    <li class="here"><span class="s">⬅</span><span><strong>2.6</strong> Everything from <code>confs/</code> + the clean-run gate — <strong>next</strong></span></li>
+    <li class="done"><span class="s">✅</span><span><strong>2.6</strong> Cold boot deploys + self-checks everything — <strong>GATE PASSED: 10m16 cold, zero errors</strong></span></li>
   </ul>
 </section>
 
@@ -404,6 +404,16 @@ curl (anything else)     ──┘      (the door)    │  └──► app2  (3
 <!-- ============ 7 ============ -->
 <section id="s7">
   <h2><span class="num">7</span> Test yourself</h2>
+  <div class="call ok"><div class="ic">🏁</div><div class="bd">
+    <div class="t">The gate — passed</div>
+    <p><code>vagrant destroy -f && rm -rf .vagrant && time vagrant up</code> →
+       <strong>10m15.9s cold</strong> (every image pulled fresh), zero errors, zero prompts. The run
+       is self-checking: it ends with four <code>routing OK</code> lines. External battery: exact p11
+       shape, both Ingress objects, four correct curls, replica proof <strong>3/3/3</strong>,
+       86 MB headroom (thin but stable — nothing further ever loads this machine).</p>
+    <p style="margin-bottom:0"><strong>p2 is complete and merged. The whole W1 mandate (p1 + p2) is
+       done.</strong></p>
+  </div></div>
 
   <details class="q"><summary><span class="qn">1</span><span>Why is editing <code>/etc/hosts</code> unnecessary for the p2 tests?</span><span class="chev">›</span></summary>
     <div class="ans"><p>The tests give curl the IP directly and set the <code>Host:</code> header by hand —
