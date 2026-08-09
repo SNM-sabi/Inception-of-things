@@ -1,0 +1,113 @@
+# p2 — the three web applications (subject p9: "3 web applications of your choice").
+# One image for all three: traefik/whoami — a tiny web server whose response
+# begins with its own pod name (how we PROVE load-balancing) and carries the
+# WHOAMI_NAME we set (how the evaluator tells the apps apart).
+# Namespace: default — p11's `kubectl get all` has no -n flag.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-one
+  labels:
+    app: app-one
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-one
+  template:
+    metadata:
+      labels:
+        app: app-one
+    spec:
+      containers:
+        - name: whoami
+          image: traefik/whoami:v1.12.0
+          env:
+            - name: WHOAMI_NAME
+              value: "app1"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-one
+spec:
+  selector:
+    app: app-one
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-two
+  labels:
+    app: app-two
+spec:
+  replicas: 3                  # subject p9 blue box: "application number 2 has 3 replicas"
+  selector:
+    matchLabels:
+      app: app-two
+  template:
+    metadata:
+      labels:
+        app: app-two
+    spec:
+      containers:
+        - name: whoami
+          image: traefik/whoami:v1.12.0
+          env:
+            - name: WHOAMI_NAME
+              value: "app2"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-two
+spec:
+  selector:
+    app: app-two
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-three
+  labels:
+    app: app-three
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-three
+  template:
+    metadata:
+      labels:
+        app: app-three
+    spec:
+      containers:
+        - name: whoami
+          image: traefik/whoami:v1.12.0
+          env:
+            - name: WHOAMI_NAME
+              value: "app3"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-three
+spec:
+  selector:
+    app: app-three
+  ports:
+    - port: 80
+      targetPort: 80
