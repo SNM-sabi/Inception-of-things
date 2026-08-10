@@ -171,6 +171,7 @@ tbody tr:hover{background:var(--line-soft)}
     <a href="#s1"><span class="n">1</span><span>The opening (60 s)</span></a>
     <a href="#s2"><span class="n">2</span><span>Part 1 — the script</span></a>
     <a href="#s3"><span class="n">3</span><span>Part 2 — the script</span></a>
+    <a href="#sTest"><span class="n">3b</span><span>Self-test p2</span></a>
     <a href="#s4"><span class="n">4</span><span>Question bank</span></a>
     <a href="#s5"><span class="n">5</span><span>Emergency card</span></a>
     <a href="#s6"><span class="n">6</span><span>What NOT to do</span></a>
@@ -369,6 +370,70 @@ vagrant ssh smbarkiS -c "kubectl describe ingress"     # both objects, one scree
   <blockquote>"Two rules — app1.com and app2.com, each to its Service; app2's Service fronts three
     endpoints, which you just saw rotate. And the separate default object sends everything else to
     app-three."</blockquote>
+</section>
+
+<hr>
+
+<!-- 3b -->
+<section id="sTest">
+  <h2><span class="num">3b</span> Self-test p2 — the drill you run alone</h2>
+  <p>Everything the evaluator will do, done by yourself first. All inside iot-host.</p>
+
+  <h3>Step 0 — position</h3>
+  <div class="pre-wrap"><pre><code>ssh iot-host
+cd Inception-of-things/p2</code></pre></div>
+
+  <h3>Step 1 — alive?</h3>
+  <p><code>vagrant status</code> → <code>smbarkiS running</code>. If <code>not created</code>:
+     <code>vagrant up</code> (6–10 min, self-checking) is the only repair p2 ever needs.</p>
+
+  <h3>Step 2 — look inside</h3>
+  <div class="pre-wrap"><pre><code>vagrant ssh smbarkiS -c "kubectl get all"</code></pre></div>
+  <p>Check three things: <strong>5 pods</strong> Running (1 + <strong>3</strong> + 1) ·
+     <code>app-two 3/3</code> · three ClusterIP services on port 80. You typed no
+     <code>-n</code> — this is p11's screenshot, live, in the default namespace.</p>
+
+  <h3>Step 3 — the four routing cases (on iot-host directly)</h3>
+  <div class="pre-wrap"><pre><code>curl -H "Host: app1.com" http://192.168.56.110          # → Name: app1
+curl -H "Host: app2.com" http://192.168.56.110          # → Name: app2
+curl http://192.168.56.110                              # → Name: app3
+curl -H "Host: banana.whatever" http://192.168.56.110   # → Name: app3</code></pre></div>
+  <p>Named hosts reach their apps; <em>anything else</em> falls to app3. Try your own garbage
+     hostnames — all must answer app3.</p>
+
+  <h3>Step 4 — replicas share the work</h3>
+  <div class="pre-wrap"><pre><code>for i in $(seq 9); do curl -s -H "Host: app2.com" http://192.168.56.110 | grep "^Hostname:"; done | sort | uniq -c</code></pre></div>
+  <p>→ three different pod names, <strong>3 each</strong>. One name ×9 = broken.</p>
+
+  <h3>Step 5 — show the Ingress (the p11 red-box screen)</h3>
+  <div class="pre-wrap"><pre><code>vagrant ssh smbarkiS -c "kubectl get ingress"
+vagrant ssh smbarkiS -c "kubectl describe ingress"</code></pre></div>
+  <p>Two objects at <code>.110</code>; in the describe: both rules (app-two with three endpoint
+     IPs) and <code>Default backend: app-three:80</code>. Practice narrating it once.</p>
+
+  <h3>Step 6 — the ultimate test</h3>
+  <div class="pre-wrap"><pre><code>vagrant destroy -f && time vagrant up</code></pre></div>
+  <p>Ends with four <code>routing OK</code> lines, zero manual steps. Then repeat steps 2–5 on
+     the fresh machine.</p>
+
+  <h3>Reading failures</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>You see</th><th>It means</th><th>First move</th></tr></thead>
+    <tbody>
+      <tr><td><code>404 page not found</code></td><td>Doorman alive, no route for that name</td>
+          <td>Wait 30 s, retry; then <code>kubectl get ingress</code> + Traefik logs</td></tr>
+      <tr><td>Refused / timeout</td><td>The door itself is closed</td>
+          <td><code>vagrant status</code>, then <code>kubectl get pods -n kube-system</code></td></tr>
+      <tr><td>One pod name ×9 in step 4</td><td>Replicas not balancing</td>
+          <td><code>kubectl get endpoints app-two</code> — three addresses?</td></tr>
+      <tr><td>Unexplainable after 2 min</td><td>Don't surgery a sick machine</td>
+          <td><code>vagrant destroy -f && vagrant up</code> — the self-checking rebuild IS the repair</td></tr>
+    </tbody>
+  </table></div>
+  <div class="call ok"><div class="ic">✓</div><div class="bd">
+    <p style="margin:0">The chain, always: <strong>curl → Traefik's logs → kubectl → rebuild if in
+       doubt.</strong> You've already run this chain for real once — it found a missing Service.</p>
+  </div></div>
 </section>
 
 <hr>

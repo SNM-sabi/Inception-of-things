@@ -194,6 +194,54 @@ vagrant ssh smbarkiS -c "kubectl describe ingress"     # both objects, one scree
 > endpoints, which you just saw rotate. And the separate default object sends everything
 > else to app-three."
 
+## 3b. Self-test p2 — the drill you run alone, step by step
+
+Everything the evaluator will do, done by yourself first. All inside iot-host.
+
+**Step 0 — position.** `ssh iot-host && cd Inception-of-things/p2`
+
+**Step 1 — alive?** `vagrant status` → `smbarkiS running`. If `not created`:
+`vagrant up` (6–10 min, self-checking) is the only repair p2 ever needs.
+
+**Step 2 — look inside.** `vagrant ssh smbarkiS -c "kubectl get all"` →
+5 pods Running (1 + **3** + 1), `app-two 3/3`, three ClusterIP services on port 80,
+no `-n` typed — this is p11's screenshot, live.
+
+**Step 3 — the four routing cases** (run on iot-host directly — "the host" is where
+the client stands):
+
+```bash
+curl -H "Host: app1.com" http://192.168.56.110     # → Name: app1
+curl -H "Host: app2.com" http://192.168.56.110     # → Name: app2
+curl http://192.168.56.110                          # → Name: app3
+curl -H "Host: banana.whatever" http://192.168.56.110   # → Name: app3
+```
+
+**Step 4 — replicas share the work.**
+
+```bash
+for i in $(seq 9); do curl -s -H "Host: app2.com" http://192.168.56.110 | grep "^Hostname:"; done | sort | uniq -c
+```
+→ three different pod names, **3 each**. One name ×9 = broken.
+
+**Step 5 — show the Ingress** (the p11 red-box screen): `kubectl get ingress` (two
+objects, both at `.110`) then `kubectl describe ingress` — practice narrating it once.
+
+**Step 6 — the ultimate test.** `vagrant destroy -f && time vagrant up` → ends with
+four `routing OK` lines and zero manual steps. Then repeat steps 2–5 on the fresh
+machine.
+
+**Reading failures:**
+
+| You see | It means | First move |
+|---|---|---|
+| `404 page not found` | Doorman alive, no route for that name | Wait 30 s, retry; then `kubectl get ingress` + Traefik logs |
+| Refused / timeout | The door itself is closed | `vagrant status`, then `kubectl get pods -n kube-system` |
+| One pod name ×9 in step 4 | Replicas not balancing | `kubectl get endpoints app-two` — three addresses? |
+| Unexplainable after 2 min | Don't surgery a sick machine | `vagrant destroy -f && vagrant up` — the self-checking rebuild IS the repair |
+
+The chain, always: **curl → Traefik's logs → kubectl → rebuild if in doubt.**
+
 ## 4. The question bank — answers you already own
 
 | Question | The answer (one breath) |
