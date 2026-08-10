@@ -205,6 +205,16 @@ tbody tr:hover{background:var(--line-soft)}
 <!-- 0 -->
 <section id="s0">
   <h2><span class="num">0</span> Pre-flight — before the evaluator sits down</h2>
+  <div class="call danger"><div class="ic">⛔</div><div class="bd">
+    <div class="t">EVERYTHING in this runbook runs INSIDE iot-host — never on the laptop</div>
+    <p>The laptop has no Vagrant, no virsh, no clusters, <em>by design</em>; it only hosts the outer
+       VM. The first command below (<code>ssh iot-host</code>) is the one that changes machines.
+       Check your prompt before typing anything else:<br>
+       <code>sabdark@sabdark-NKx0Kx</code> = laptop (wrong place) ·
+       <code>sabdark@iot-host</code> = inside (right place).<br>
+       The repo path differs too: inside it is <code>~/Inception-of-things</code>, not
+       <code>~/Desktop/1337/…</code>.</p>
+  </div></div>
   <p>Run these yourself, alone, that morning:</p>
   <div class="pre-wrap"><pre><code>ssh iot-host                                  # the outer VM is up (it autostarts)
 cd Inception-of-things && git pull            # repo inside matches main

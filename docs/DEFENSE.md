@@ -13,6 +13,13 @@ runbook: **something is always building while you are always explaining.**
 
 ## 0. Pre-flight — before the evaluator sits down
 
+**⚠ EVERYTHING in this runbook runs INSIDE `iot-host` — never on the laptop.** The
+laptop has no Vagrant, no virsh, no clusters, by design; it only hosts the outer VM.
+The first command below is the one that changes machines. Check your prompt before
+typing anything else:
+`sabdark@sabdark-NKx0Kx` = laptop (wrong place) · `sabdark@iot-host` = inside (right place).
+And the repo path differs: inside it is `~/Inception-of-things`, not `~/Desktop/1337/…`.
+
 Run these yourself, alone, that morning:
 
 ```bash
